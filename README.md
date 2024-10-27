@@ -2,8 +2,11 @@
 
 ### Jupyter visualisation notebooks supporting millions of points smoothly
 
-This collection of notebooks use datashader so must run in Jupyter.
+A collection of notebooks that use Holoviews and datashader so must run in Jupyter or other Holoviews server.
 Static png or html can be exported but they are not interactive.
+The only example at present is a genomic HiC contact pair viewer that can show the entire map of 14 million pairs and any level of
+zoom down to individual contact pair points. Some samples below use Arima HiC reads from the VGP mUroPar1 Artic Ground Squirrel, 
+processed through a Galaxy workflow.
 
 For all these notebooks, first, run 
 
@@ -14,14 +17,15 @@ Both take about 90 seconds each.
 
 #### 1. hapsHiCpafHoloview.ipynb is a plotter for paired HiC contact points, input as a PAF.
 
-This is from the Arctic Ground Squirrel mUroPar1 HiC VGP data
+This is from the Arctic Ground Squirrel mUroPar1 HiC VGP data. It is zoomed in to show contact pairs from the input PAF that were located on the H1 Y chromosome.
+
 <img src="https://github.com/user-attachments/assets/3f94291c-8905-40d4-aa5a-ba379812d67b" alt="h1-h1, h2-h2 pairs" width="800"/>
 
-The strangely disordered block of HiC contact points on chrY looks very unusual.
-Interestingly it corresponds to a region of non B DNA repeats in the T2T HG002 Y chromosome described in https://www.nature.com/articles/s41586-023-06457-y
+There is an obvious yellowish diagonal line, where the majority of contact pairs have their two ends close together along the Y chromosome. 
+There is a large, dense and chaotic rectangular pattern at one end, and some dense linear features at an angle to the main diagonal.
+There is a variable, thin scattering of off-diagonal dots, representing the less common pairs with their two ends much further apart on the Y chromosome.
 
-![image](https://github.com/user-attachments/assets/606a1b3e-be5e-4915-a335-7c300601392e)
-
+The matrix is symmetrical so only one half is needed but it is visually more impressive as shown
 
 The notebook makes 3 interactive plots showing H1/H1, H2/H2 "cis" pairs, and H1/H2 "trans" pairs. 
 These work well with 14 million points. Occasional slow patches but can pan and wheel zoom down from all ponts to single pairs easily. 
@@ -33,6 +37,18 @@ There's ~200 lines of code to make the axes - must be ordinal for datashader to 
 Contigs and sizes have to be inferred from the data so it's 2 passes. The actual holoviews/panel code is ~20 lines once the data are in a grid. 
 Holoviews is dynamite.
 
+#### Gallery of screenshots
+
+The images are highly interactive in a Jupyter notebook but these static screenshots give some idea of what they can do.
+
+1. ChrY 
+
+The region shown above included a strangely disordered block of HiC contact points. It is in chrY and looks very unusual compared to the rest of the plot.
+Perhaps there is some biology there because it seems to correspond to the very large region of non B DNA repeats in the Human T2T HG002 Y chromosome, described 
+in https://www.nature.com/articles/s41586-023-06457-y and seen in this figure from the paper.
+
+![image](https://github.com/user-attachments/assets/606a1b3e-be5e-4915-a335-7c300601392e)
+
 Here are the first few pairs on chr1 for H1 and H2 - they are about 20k from the start of the assembly - presumably no HiC pairs in the actual telomeres.
 
 <img src="https://github.com/user-attachments/assets/4d7a62b9-a98b-4854-a737-f8d68b0f8c4b" alt="h1-h1 and h2-h2 pairs" width="800"/>
@@ -42,11 +58,10 @@ and the H1-H2 pairs
 <img src="https://github.com/user-attachments/assets/84f0066c-ce9e-4f14-92f9-4a8f019f2f9d" alt="h1-h2 pairs" width="500"/>
 
 
-The first records in the PAF for a pair nearest offset 0 are
+The first records in the PAF for a pair nearest offset 0 are at 19087/19310 and 19310/19087 so expect to see the very first points in SUPER1 of H1 somewhere near those coordinates.
 ```
 SUPER_1H1       284260672       19087   19238   -       SUPER_1H1       284260672       19310   19461   151     151     255
 SUPER_1H1       284260672       19310   19461   -       SUPER_1H1       284260672       19087   19238   151     151     255
 ```
-Zooming right in to the start of SUPER1 on H1 shows a pair of points at the expected coordinates so that suggests it may be showing what's in the data... 
+Zooming right in to the start of SUPER1 on H1 shows that the single point shown above resolves into a pair of points at the expected coordinates, confirming that the image may be showing what's in the data... 
 
-<img src="https://github.com/user-attachments/assets/645505aa-673c-4dbc-8a65-99b3cb9bbebb" width="500"/>
