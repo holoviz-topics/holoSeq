@@ -42,3 +42,11 @@ and the H1-H2 pairs
 <img src="https://github.com/user-attachments/assets/84f0066c-ce9e-4f14-92f9-4a8f019f2f9d" alt="h1-h2 pairs" width="500"/>
 
 
+The first records in the PAF for a pair nearest offset 0 are
+```
+SUPER_1H1       284260672       19087   19238   -       SUPER_1H1       284260672       19310   19461   151     151     255
+SUPER_1H1       284260672       19310   19461   -       SUPER_1H1       284260672       19087   19238   151     151     255
+```
+Zooming right in to the start of SUPER1 on H1 shows a pair of points at the expected coordinates so that suggests it may be showing what's in the data... 
+
+<img src="https://github.com/user-attachments/assets/645505aa-673c-4dbc-8a65-99b3cb9bbebb" width="500"/>
