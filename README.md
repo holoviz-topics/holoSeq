@@ -49,6 +49,8 @@ in https://www.nature.com/articles/s41586-023-06457-y and seen in this figure fr
 
 ![image](https://github.com/user-attachments/assets/606a1b3e-be5e-4915-a335-7c300601392e)
 
+2. Some validation of point coordinates
+   
 Here are the first few pairs on chr1 for H1 and H2 - they are about 20k from the start of the assembly - presumably no HiC pairs in the actual telomeres.
 
 <img src="https://github.com/user-attachments/assets/4d7a62b9-a98b-4854-a737-f8d68b0f8c4b" alt="h1-h1 and h2-h2 pairs" width="800"/>
@@ -62,6 +64,16 @@ The first records in the PAF for a pair nearest offset 0 are at 19087/19310 and 
 ```
 SUPER_1H1       284260672       19087   19238   -       SUPER_1H1       284260672       19310   19461   151     151     255
 SUPER_1H1       284260672       19310   19461   -       SUPER_1H1       284260672       19087   19238   151     151     255
+
+
 ```
 Zooming right in to the start of SUPER1 on H1 shows that the single point shown above resolves into a pair of points at the expected coordinates, confirming that the image may be showing what's in the data... 
 
+3. Interesting features
+
+Below are the points in H1 and H2 in the same region of the trans plot where I noticed an odd looking
+break in the main diagonal as an example of what's possible in the notebook.
+
+<img src="https://github.com/user-attachments/assets/20252a6d-2058-484d-a70d-413cc22cd706" alt="h1-h2 pairs" width="500"/>
+
+   
