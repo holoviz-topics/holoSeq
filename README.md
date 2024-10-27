@@ -15,9 +15,13 @@ For all these notebooks, first, run
 to load all the dependencies, then run the main script. 
 Both take about 90 seconds each. 
 
-#### 1. hapsHiCpafHoloview.ipynb is a plotter for paired HiC contact points, input as a PAF.
+#### 1. hapsHiCpafHoloview.ipynb is a plotter for paired HiC contact pointss.ss, input as a PAF.
 
-This is from the Arctic Ground Squirrel mUroPar1 HiC VGP data. It is zoomed in to show contact pairs from the input PAF that were located on the H1 Y chromosome.
+This is from the Arctic Ground Squirrel mUroPar1 HiC VGP data. It shows the three images and about 14 million points.
+
+<img src="https://github.com/user-attachments/assets/e288f295-84b0-4121-9099-db5007445a27" alt="h1-h1, h2-h2 pairs" width="800"/>
+
+Zooming in to the H1 Y chromosome shows
 
 <img src="https://github.com/user-attachments/assets/3f94291c-8905-40d4-aa5a-ba379812d67b" alt="h1-h1, h2-h2 pairs" width="800"/>
 
