@@ -21,13 +21,6 @@ This is from the Arctic Ground Squirrel mUroPar1 HiC VGP data. It shows the thre
 
 <img src="https://github.com/user-attachments/assets/e288f295-84b0-4121-9099-db5007445a27" alt="h1-h1, h2-h2 pairs" width="800"/>
 
-Zooming in to the H1 Y chromosome shows
-
-<img src="https://github.com/user-attachments/assets/3f94291c-8905-40d4-aa5a-ba379812d67b" alt="h1-h1, h2-h2 pairs" width="800"/>
-
-There is an obvious yellowish diagonal line, where the majority of contact pairs have their two ends close together along the Y chromosome. 
-There is a large, dense and chaotic rectangular pattern at one end, and some dense linear features at an angle to the main diagonal.
-There is a variable, thin scattering of off-diagonal dots, representing the less common pairs with their two ends much further apart on the Y chromosome.
 
 The matrix is symmetrical so only one half is needed but it is visually more impressive as shown
 
@@ -47,7 +40,14 @@ The images are highly interactive in a Jupyter notebook but these static screens
 
 1. ChrY 
 
-The region shown above included a strangely disordered block of HiC contact points. It is in chrY and looks very unusual compared to the rest of the plot.
+Zooming in to the H1 Y chromosome shows
+
+<img src="https://github.com/user-attachments/assets/3f94291c-8905-40d4-aa5a-ba379812d67b" alt="h1-h1, h2-h2 pairs" width="800"/>
+
+There is an obvious yellowish diagonal line, where the majority of contact pairs have their two ends close together along the Y chromosome. 
+There is a large, dense and chaotic rectangular pattern at one end, and some dense linear features at an angle to the main diagonal.
+There is a variable, thin scattering of off-diagonal dots, representing the less common pairs with their two ends much further apart on the Y chromosome.
+
 Perhaps there is some biology there because it seems to correspond to the very large region of non B DNA repeats in the Human T2T HG002 Y chromosome, described 
 in https://www.nature.com/articles/s41586-023-06457-y and seen in this figure from the paper.
 
