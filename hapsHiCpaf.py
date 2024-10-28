@@ -81,6 +81,23 @@ def xportHtml():
     hv.save(filename="H1cis.html", obj=hv_pane)
 
 
+def export_mapping():
+
+    for ofn, d, hstarts in [
+        ("cis1.tab", cis1, hqstarts[0]),
+        ("cis2.tab", cis2, hqstarts[1]),
+        ("trans1.tab", trans1, None),
+    ]:
+        with open(ofn, "w") as f:
+            for i in range(len(d["x"])):
+                row = "%d\t%d\n" % (d["x"][i], d["y"][i])
+                f.write(row)
+        if hstarts is not None:
+            with open("%s.len" % ofn, "w") as f2:
+                clens = ["%s\t%d\n" % (x, hstarts[x]) for x in inhstarts.keys()]
+                f2.write("".join(clens))
+
+
 def sorthapqname(s1, s2):
     """
     Ultimately futile unless there are consistent contig  naming rules and there are not - there is super_2 and super13_unloc_5 FFS.
@@ -253,15 +270,6 @@ with open(inFile, "r") as f:
             else:
                 cis2["x"].append(hqstarts[H1][c1] + int(row[2]))
                 cis2["y"].append(hqstarts[H2][c2] + int(row[7]))
-for (ofn, d, hstarts) in[('cis1.tab', cis1, hqstarts[0]), ('cis2.tab', cis2, hqstarts[1]),('trans1.tab', trans1, None),]:
-    with open(ofn,'w') as f:
-            for i in range(len(d['x'])):
-                row = '%d\t%d\n' % (d['x'][i], d['y'][i]])
-                f.write(row)
-            if hstarts is not None:
-                with open('%s.len' % ofn, 'w') as f2:
-                    clens = ['%s\t%d\n' % (x,hstarts[x]) for x inhstarts.keys() ]
-                    f2.write(''.join(clens))
 hap = haps[0]
 qtic1 = [(hqstarts[hap][x], x) for x in hqstarts[hap].keys()]
 hap = haps[1]
@@ -309,58 +317,89 @@ showloc1 = pn.bind(showH1, x=streamcis1.param.x, y=streamcis1.param.y)
 showloc2 = pn.bind(showH2, x=streamcis2.param.x, y=streamcis2.param.y)
 showloctrans = pn.bind(showTrans, x=streamtrans.param.x, y=streamtrans.param.y)
 # prepare and show the 3 plots
-p1 = pn.Column(showloc1, pn.pane.HoloViews(dynspread(rasterize(pafcis1).relabel("%s Cis HiC interactions" % haps[0]).opts(
-            cmap="inferno",
-            cnorm="log",
-            colorbar=True,
-            width=pcwidth,
-            height=pcwidth,
-            xticks=qtic1,
-            yticks=qtic1,
-            xrotation=45,
-            fontsize={"xticks": 5, "yticks": 5},
-            tools=['tap'], 
-            shared_axes=False,
-            scalebar=True, 
-            scalebar_range='x',
-            scalebar_location="top_left",
-            scalebar_unit=('bp'),))))
+p1 = pn.Column(
+    showloc1,
+    pn.pane.HoloViews(
+        dynspread(
+            rasterize(pafcis1)
+            .relabel("%s Cis HiC interactions" % haps[0])
+            .opts(
+                cmap="inferno",
+                cnorm="log",
+                colorbar=True,
+                width=pcwidth,
+                height=pcwidth,
+                xticks=qtic1,
+                yticks=qtic1,
+                xrotation=45,
+                fontsize={"xticks": 5, "yticks": 5},
+                tools=["tap"],
+                shared_axes=False,
+                scalebar=True,
+                scalebar_range="x",
+                scalebar_location="top_left",
+                scalebar_unit=("bp"),
+            )
+        )
+    ),
+)
 
-p2 = pn.Column(showloc2, pn.pane.HoloViews(dynspread(rasterize(pafcis2).relabel("%s Cis HiC interactions" % haps[1]).opts(
-            cmap="inferno",
-            cnorm="log",
-            colorbar=True,
-            width=pcwidth,
-            height=pcwidth,
-            xticks=qtic2,
-            yticks=qtic2,
-            xrotation=45,
-            fontsize={"xticks": 5, "yticks": 5},
-            tools=['tap'],
-            shared_axes=False,
-            scalebar=True, 
-            scalebar_range='x',
-            scalebar_location="top_left",
-            scalebar_unit=('bp'),
-            ))))
+p2 = pn.Column(
+    showloc2,
+    pn.pane.HoloViews(
+        dynspread(
+            rasterize(pafcis2)
+            .relabel("%s Cis HiC interactions" % haps[1])
+            .opts(
+                cmap="inferno",
+                cnorm="log",
+                colorbar=True,
+                width=pcwidth,
+                height=pcwidth,
+                xticks=qtic2,
+                yticks=qtic2,
+                xrotation=45,
+                fontsize={"xticks": 5, "yticks": 5},
+                tools=["tap"],
+                shared_axes=False,
+                scalebar=True,
+                scalebar_range="x",
+                scalebar_location="top_left",
+                scalebar_unit=("bp"),
+            )
+        )
+    ),
+)
 
-p12 = pn.Row(p1,p2)
+p12 = pn.Row(p1, p2)
 
-p3 = pn.Row(pn.Column(showloctrans, pn.pane.HoloViews(dynspread(rasterize(paftrans).relabel("%s/%s Trans HiC interactions" % (haps[0], haps[1])).opts(
-            cmap="inferno",
-            cnorm="log",
-            colorbar=True,
-            width=ptwidth,
-            height=ptwidth,
-            xticks=qtic1,
-            yticks=qtic2,
-            xrotation=45,
-            shared_axes=False,
-            fontsize={"xticks": 5, "yticks": 5},
-            tools=['tap'],
-            scalebar=True, 
-            scalebar_range='x',
-            scalebar_location="top_left",
-            scalebar_unit=('bp'))))))
+p3 = pn.Row(
+    pn.Column(
+        showloctrans,
+        pn.pane.HoloViews(
+            dynspread(
+                rasterize(paftrans)
+                .relabel("%s/%s Trans HiC interactions" % (haps[0], haps[1]))
+                .opts(
+                    cmap="inferno",
+                    cnorm="log",
+                    colorbar=True,
+                    width=ptwidth,
+                    height=ptwidth,
+                    xticks=qtic1,
+                    yticks=qtic2,
+                    xrotation=45,
+                    shared_axes=False,
+                    fontsize={"xticks": 5, "yticks": 5},
+                    tools=["tap"],
+                    scalebar=True,
+                    scalebar_range="x",
+                    scalebar_location="top_left",
+                    scalebar_unit=("bp"),
+                )
+            )
+        ),
+    )
+)
 
 pn.Column(p12, p3)
