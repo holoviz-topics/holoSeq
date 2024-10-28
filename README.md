@@ -9,12 +9,12 @@ A draft framework [specification is here.](https://github.com/fubar2/holoSeq/blo
 
 Briefly, the framework is built around an optionally gzipped text data format, that supplies pre-computed plot coordinates, with a header 
 describing the reference sequence or sequences forming the plot axes. Converters for common genomic annotation formats, such as PAF, bigwig and bed
-will be provided. The design isolates the complexities of displaying many different kinds of annotation at genomic scale from the details of converting a zoo of data
-from external sources in important standard formats. Any number of input files can be supplied to the generic IPython notebook where
-they are automatically organised and displayed.
+will be provided. 
 
-Scaling and zooming rely on datashader running on a Holoviews or Bokeh server. Static images can be captured. Interactive HTML can be exported, but without a datashader provider, zoomed detail is 
-very limited.
+This design isolates the complexities of displaying many different kinds of annotation at genomic scale, from the details of converting a zoo of data
+from external sources in important standard formats. Any number of input files can be supplied to the generic IPython notebook, where
+they are automatically organised and displayed. Scaling and zooming rely on datashader running on a Holoviews or Bokeh server. 
+Static images can be captured. Interactive HTML can be exported, but without a datashader provider, zoomed detail is limited. 
 
 As proof of concept, a genomic HiC contact pair viewer that can show the entire map of 14 million pairs and any level of
 zoom down to individual contact pair points is provided. Screenshots below use Arima HiC reads from the VGP *mUroPar1* Arctic Ground Squirrel, 
