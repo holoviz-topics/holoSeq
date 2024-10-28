@@ -5,15 +5,19 @@
 
 <img src="https://github.com/fubar2/hv-notebooks/blob/main/h2.gif" alt="zoom demo" width="125"/>       <img src="https://github.com/fubar2/hv-notebooks/blob/main/h1.gif" alt="zoom demo" width="125"/>
 
-A detailed framework [specification is here.](https://github.com/fubar2/holoSeq/blob/main/HoloSeqOverview.md). Briefly, the framework relies an optionally gzipped text data format containing
-pre-computed plot coordinates, and a header describing the reference sequence or sequences that those coordinates refer to. Converters for common genomic annotation formats, such as PAF, bigwig and bed
-will be supplied. Any number of input files in that data format can be supplied to a generic IPython notebook, for organisation and interactive display.
+A draft framework [specification is here.](https://github.com/fubar2/holoSeq/blob/main/HoloSeqOverview.md). 
+
+Briefly, the framework is built around an optionally gzipped text data format, that supplies pre-computed plot coordinates, with a header 
+describing the reference sequence or sequences forming the plot axes. Converters for common genomic annotation formats, such as PAF, bigwig and bed
+will be provided. The design isolates the complexities of displaying many different kinds of annotation at genomic scale from the details of converting a zoo of data
+from external sources in important standard formats. Any number of input files can be supplied to the generic IPython notebook where
+they are automatically organised and displayed.
 
 Scaling and zooming rely on datashader running on a Holoviews or Bokeh server. Static images can be captured. Interactive HTML can be exported, but without a datashader provider, zoomed detail is 
 very limited.
 
 As proof of concept, a genomic HiC contact pair viewer that can show the entire map of 14 million pairs and any level of
-zoom down to individual contact pair points is provided. Screenshots below use Arima HiC reads from the VGP mUroPar1 Arctic Ground Squirrel, 
+zoom down to individual contact pair points is provided. Screenshots below use Arima HiC reads from the VGP *mUroPar1* Arctic Ground Squirrel, 
 processed through a Galaxy workflow.
 
 For all these notebooks, first, run 
