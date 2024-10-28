@@ -35,11 +35,12 @@ emphasised
 where that sequence is on both axes, or 2 axis names if HiC pairs that involve both haplotypes are being plotted.
 
 The subsequent header rows must have the axis names, contig names and their lengths, delimited by whitespace, and starting with `@` such as
-`
+
+```
 @H1 chr1 199943902
 @H2 chr1 199942264
-...
-`
+....
+```
 
 Data rows for 1d data must have the x ordinal axis coordinate, a feature length, and an annotation value to show for that length, such as
 `2455453443 128 99.8`
