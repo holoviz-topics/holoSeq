@@ -1,7 +1,7 @@
 ## HoloSeq
 
 This document describes a data format, containing pre-gridded sequence annotation, that allows large scale data to be viewed
-as 1d charts or 2d heatmaps using a generic visualisation infrastructure built using the Python [Holoviews ecosystem](https://holoviews.org/).
+as 1D charts or 2D heatmaps using a generic visualisation infrastructure built using the Python [Holoviews ecosystem](https://holoviews.org/).
 
 The presentation layer is designed for large scale data associated with a genomic reference or other sequence. It can pan and zoom smoothly from whole genomes down to 
 individual points with tens of millions of rows of data, in a web browser running on a suitable laptop or in Galaxy.
@@ -12,7 +12,7 @@ For an interactive genome browser, tracks typically run horizontally, from the s
 
 Holoviews dynamic maps require ordinal axis coordinates while a typical assembly haplotype or reference sequence consists of
 an arbitrary number of chromosomes, or more generally `contigs`, each of a fixed length. The contigs must be ordered, usually by name or by length,
-so they can be placed in a row to create the horizontal axis and for 2D grids, the vertical axis, each with tick marks indicating the start of each contig.
+so they can be placed in a row to create the horizontal axis, and for 2D grids, the vertical axis, each with tick marks indicating the start of each contig.
 
 The features annotating any track must have a position in the reference sequence used to create the axis. 
 It is usually described by the name of the contig, and the number of bases from the start of the contig to the start of the feature. 
@@ -30,13 +30,13 @@ The input file may be a gzip in which case it will be uncompressed.
 
 The text data must start with a header section describing the data, where every row starts with `@`.
 
-The first row of the (uncompressed) header must be either `@v1HoloSeq1D [chart type | bar]` or `@v1HoloSeq2d` or the data will not be processed.
+The first row of the (uncompressed) header must be either `@v1HoloSeq1D [chart type | bar]` or `@v1HoloSeq2D` or the data will not be processed.
 
 For 1D data, the chart type may be one of bar, scatter or line. Default is bar. Regions with 4 or more SD above or below the global mean are 
 emphasised
 
-2D data will be presented as an autoscaling density heatmap, and the data may have 1 axis name if HiC pairs from 1 haplotype are being plotted
-where that sequence is on both axes, or 2 axis names if HiC pairs that involve both haplotypes are being plotted.
+2D data will be presented as an autoscaling density heatmap. The header and data may have 1 axis name, for example where HiC pairs from one haplotype are plotted
+with that sequence on both axes, or 2 axis names, if HiC pairs involving both haplotypes, one on each axis, are being plotted.
 
 The subsequent header rows must have the axis names, contig names and their lengths, delimited by whitespace, and starting with `@` such as
 
