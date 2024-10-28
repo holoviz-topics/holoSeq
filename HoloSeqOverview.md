@@ -24,7 +24,7 @@ so they can be placed in a row, with tick marks and labels.
 
 The features annotating any track must have a position in the reference sequence used to create the axis. 
 It is usually described by the name of the contig, and the number of bases from the start of the contig to the start of the feature. 
-Some features have a length while others for 2D grids are points. Features may have additional annotation for user toggled hover tool tips. 
+Some features have a length while others for 2D grids are points.
 
 To convert feature positions into plot axis coordinates, contig lengths are cumulated in the order given, to give the ordinal axis value for the first base
 of each ordered contig. When a feature is mapped, the appropriate contig cumulated start is added to the feature offset, to give the 
