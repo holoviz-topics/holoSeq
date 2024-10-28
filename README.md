@@ -1,13 +1,19 @@
 # holoSeq
 
-### Jupyter visualisation notebooks supporting millions of points smoothly 
-<img src="https://github.com/fubar2/hv-notebooks/blob/main/h2.gif" alt="zoom demo" width="150"/>       <img src="https://github.com/fubar2/hv-notebooks/blob/main/h1.gif" alt="zoom demo" width="150"/>
+#### An interactive visualisation framework for genomic data, scaling to tens of millions of points.
+*Built using the Holoviews and IPython notebook ecosystem.*
 
+<img src="https://github.com/fubar2/hv-notebooks/blob/main/h2.gif" alt="zoom demo" width="125"/>       <img src="https://github.com/fubar2/hv-notebooks/blob/main/h1.gif" alt="zoom demo" width="125"/>
 
-A collection of notebooks that use Holoviews and datashader so must run in Jupyter or other Holoviews server.
-Static png or html can be exported but they are not interactive.
-The only example at present is a genomic HiC contact pair viewer that can show the entire map of 14 million pairs and any level of
-zoom down to individual contact pair points. Some samples below use Arima HiC reads from the VGP mUroPar1 Arctic Ground Squirrel, 
+A detailed framework [specification is here.](https://github.com/fubar2/holoSeq/blob/main/HoloSeqOverview.md). Briefly, the framework relies an optionally gzipped text data format containing
+pre-computed plot coordinates, and a header describing the reference sequence or sequences that those coordinates refer to. Converters for common genomic annotation formats, such as PAF, bigwig and bed
+will be supplied. Any number of input files in that data format can be supplied to a generic IPython notebook, for organisation and interactive display.
+
+Scaling and zooming rely on datashader running on a Holoviews or Bokeh server. Static images can be captured. Interactive HTML can be exported, but without a datashader provider, zoomed detail is 
+very limited.
+
+As proof of concept, a genomic HiC contact pair viewer that can show the entire map of 14 million pairs and any level of
+zoom down to individual contact pair points is provided. Screenshots below use Arima HiC reads from the VGP mUroPar1 Arctic Ground Squirrel, 
 processed through a Galaxy workflow.
 
 For all these notebooks, first, run 
@@ -27,11 +33,14 @@ This is from the Arctic Ground Squirrel mUroPar1 HiC VGP data. It shows the thre
 The matrix is symmetrical so only one half is needed but it is visually more impressive as shown
 
 The notebook makes 3 interactive plots showing H1/H1, H2/H2 "cis" pairs, and H1/H2 "trans" pairs. 
-These work well with 14 million points. Occasional slow patches but can pan and wheel zoom down from all ponts to single pairs easily. 
+These work well with 14 million points. Occasional pauses before rescaling and refresh, but can pan and wheel zoom down from all ponts to single pairs easily. 
 
 Click anywhere to see the coordinates or drag, and use the mouse wheel to zoom. When run locally with 4.2.5, it is astounding. 14 million points. The old version does not do datashader properly so goes all blocky as you zoom.
 
-There's ~200 lines of code to make the axes - must be ordinal for datashader to work so have to map the contigs end to end before can assign x/y grid coordinates to the pairs read from the paf input file.
+There's ~250 lines of code to make the axes - must be ordinal for datashader to work so have to map the contigs end to end before can assign x/y grid coordinates to the pairs read from the paf input file.
+
+That code already contains a PAF converter, and the generic IPython notebook visualiser will be built using the existing visualisation components, adding 1D converters and tracks, with 
+grouping by common reference sequence in the header and vertical stack layout.
 
 Contigs and sizes have to be inferred from the data so it's 2 passes. The actual holoviews/panel code is ~20 lines once the data are in a grid. 
 Holoviews is dynamite.
