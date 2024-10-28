@@ -1,6 +1,8 @@
 # hv-notebooks
 
 ### Jupyter visualisation notebooks supporting millions of points smoothly
+<img src="https://github.com/fubar2/hv-notebooks/blob/main/h1.gif" alt="zoom demo" width="400"/>
+
 
 A collection of notebooks that use Holoviews and datashader so must run in Jupyter or other Holoviews server.
 Static png or html can be exported but they are not interactive.
