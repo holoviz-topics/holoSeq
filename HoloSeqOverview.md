@@ -1,18 +1,26 @@
-## HoloSeq
+# HoloSeq
 
 This document describes a data format, containing pre-gridded sequence annotation, that allows large scale data to be viewed
-as 1D charts or 2D heatmaps using a generic visualisation infrastructure built using the Python [Holoviews ecosystem](https://holoviews.org/).
+as 1D charts or 2D heatmaps using a generic visualisation infrastructure built using the [Holoviews ecosystem](https://holoviews.org/).
 
 The presentation layer is designed for large scale data associated with a genomic reference or other sequence. It can pan and zoom smoothly from whole genomes down to 
-individual points with tens of millions of rows of data, in a web browser running on a suitable laptop or in Galaxy.
+individual points with tens of millions of rows of data, in a web browser running on a suitable laptop or in Galaxy. The data format
+provides all the information needed for accurate plotting, on the inbuilt reference sequence coordinates, in a very sparse form. Redundancy in the
+contigs and lengths in each header, is acceptable in the context of millions of subsequent data points.
+
+### Potential sources of annotation for display
+
+HiC data in PAF format was used for the proof of concept 2D heatmaps.
+
+Bigwig, bed and GFF are the major formats for 1D annotation tracks.
 
 ### Coordinate system
 
 For an interactive genome browser, tracks typically run horizontally, from the start of the reference sequence on the left to the last nucleotide of the last contig.
 
-Holoviews dynamic maps require ordinal axis coordinates while a typical assembly haplotype or reference sequence consists of
-an arbitrary number of chromosomes, or more generally `contigs`, each of a fixed length. The contigs must be ordered, usually by name or by length,
-so they can be placed in a row to create the horizontal axis, and for 2D grids, the vertical axis, each with tick marks indicating the start of each contig.
+Holoviews dynamic maps require ordinal axis coordinates. A typical assembly haplotype or reference sequence consists of
+an arbitrary number of chromosomes, or more generally `contigs`, each of a fixed length. Contigs must be ordered on the axes, usually by name or by length,
+so they can be placed in a row, with tick marks and labels.
 
 The features annotating any track must have a position in the reference sequence used to create the axis. 
 It is usually described by the name of the contig, and the number of bases from the start of the contig to the start of the feature. 
