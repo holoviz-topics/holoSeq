@@ -5,7 +5,7 @@
 A collection of notebooks that use Holoviews and datashader so must run in Jupyter or other Holoviews server.
 Static png or html can be exported but they are not interactive.
 The only example at present is a genomic HiC contact pair viewer that can show the entire map of 14 million pairs and any level of
-zoom down to individual contact pair points. Some samples below use Arima HiC reads from the VGP mUroPar1 Artic Ground Squirrel, 
+zoom down to individual contact pair points. Some samples below use Arima HiC reads from the VGP mUroPar1 Arctic Ground Squirrel, 
 processed through a Galaxy workflow.
 
 For all these notebooks, first, run 
