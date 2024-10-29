@@ -16,6 +16,7 @@
 # This holoviews application is mostly monolithic because it cannot easily be
 # split up without passing lots of parameters AFAIK.
 # it works. be happy.
+import argparse
 from bisect import bisect_left
 from collections import OrderedDict
 import gzip
@@ -176,7 +177,13 @@ def import_holoSeq_data(inFile):
                             return None
     return((hsDims, haps, xcoords, ycoords, annos, plotType, title))
 
-pcwidth = 800
+parser = argparse.ArgumentParser(description="", epilog="")
+parser.add_argument("--inFile", help="gzipped hseq coordinates and contigs", default="mUroPar1_cis1.hseq.gz")
+parser.add_argument("--size", help="Display size in pixels. Default is 800", default=800)
+parser.add_argument("--version", "-V", action="version", version='0.1')
+args = parser.parse_args()
+inFile = args.inFile
+pcwidth = int(args.size)
 # width settings for plots and location bars
 # Default values suitable for this notebook
 decimate.max_samples = 10000
@@ -187,7 +194,6 @@ ResampleOperation2D.height = 1500
 # need to convert the categorical contigs into a sequence for holoviews to munch
 # use the contig length from the paf to figure out the cumulative start for each contig
 # contigs are length ordered - that does not always work well when the haplotypes differ widely
-inFile = 'mUroPar1_cis1.hseq.gz'
 print('Infile = ', inFile)
 hqstarts = OrderedDict()
 hlens = {}
