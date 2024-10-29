@@ -1,7 +1,7 @@
 # holoSeq
 
 #### An interactive visualisation framework for genomic data, scaling to tens of millions of points.
-*Built using the Holoviews and IPython notebook ecosystem.*
+*Built using the [Holoviews](https://holoviews.org/) and IPython notebook ecosystem.*
 
 <img src="https://github.com/fubar2/hv-notebooks/blob/main/h2.gif" alt="zoom demo" width="125"/>       <img src="https://github.com/fubar2/hv-notebooks/blob/main/h1.gif" alt="zoom demo" width="125"/>
 
