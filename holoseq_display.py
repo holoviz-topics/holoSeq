@@ -199,24 +199,33 @@ hlens = {}
 haps = []
 (hsDims, hapsread, xcoords, ycoords, annos, plotType, plotTitle) = import_holoSeq_data(inFile)
 print('Read nx=', len(xcoords), 'ny=',len(ycoords))
+h1starts = []
+h1names = []
 for hap in hapsread.keys():
     haps.append(hap)
     hqstarts[hap] = OrderedDict()
     for i, contig in enumerate(hapsread[hap]['cn']):
         cstart = hapsread[hap]['startpos'][i]
         hqstarts[hap][contig] = cstart
+        h1starts.append(cstart)
+        h1names.append(contig)
 hap = haps[0]
-h1starts = [hqstarts[hap][x] for x in hqstarts[haps[0]].keys()]
-h1names = list(hqstarts[hap].keys())
-qtic1 = [(hqstarts[hap][x], x) for x in hqstarts[hap].keys()]
+print('h1names=',h1names)
+# qtic1 = [(hqstarts[hap][x], x) for x in hqstarts[hap].keys()]
+qtic1 = [(h1starts[i], h1names[i]) for i in range(len(h1starts))]
+print('qtic1=', qtic1)
 isTrans = False
 if hsDims == "2": # may be one or two distinct haplotype identifiers - H1 +/- H2
     if len(haps) > 1:
         hap = haps[1]
         isTrans = True
-h2starts = [hqstarts[hap][x] for x in hqstarts[hap].keys()]
-h2names = list(hqstarts[hap].keys())
-qtic2 = [(hqstarts[hap][x], x) for x in hqstarts[hap].keys()]
+        h2starts = [hqstarts[hap][x] for x in hqstarts[hap].keys()]
+        h2names = list(hqstarts[hap].keys())
+        qtic2 = [(hqstarts[hap][x], x) for x in hqstarts[hap].keys()]
+    else:
+        h2starts = h1starts
+        h1names = h2names
+        qtic2 = qtic1
 # can take the np.tril or filter the upper triangle while processing pairs
 # and rotate so the diagonal becomes the x axis but need some kind of
 # sideways scroller to work right
@@ -252,7 +261,7 @@ p1 = pn.Column(
                 width=pcwidth,
                 height=pcwidth,
                 xticks=qtic1,
-                yticks=qtic2,
+                yticks=qtic1,
                 xrotation=45,
                 fontsize={"xticks": 5, "yticks": 5},
                 tools=["tap"],
