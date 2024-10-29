@@ -187,7 +187,7 @@ ResampleOperation2D.height = 1500
 # need to convert the categorical contigs into a sequence for holoviews to munch
 # use the contig length from the paf to figure out the cumulative start for each contig
 # contigs are length ordered - that does not always work well when the haplotypes differ widely
-inFile = 'test.gz'
+inFile = 'mUroPar1_cis1.hseq.gz'
 print('Infile = ', inFile)
 hqstarts = OrderedDict()
 hlens = {}
