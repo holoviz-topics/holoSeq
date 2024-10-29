@@ -20,12 +20,43 @@ As proof of concept, a genomic HiC contact pair viewer that can show the entire 
 zoom down to individual contact pair points is provided. Screenshots below use Arima HiC reads from the VGP *mUroPar1* Arctic Ground Squirrel, 
 processed through a Galaxy workflow.
 
-For all these notebooks, first, run 
 
-> ! pip install datashader dask[dataframe] holoviews[recommended] pandas matplotlib bokeh
+#### Install and test the local demonstration
+In the directory where you have cloned this repository,
+```
+python -m venv venv
+. venv/bin/activate
+pip install -r requirements.txt 
+panel serve holoseq_display.py
 
-to load all the dependencies, then run the main script. 
-Both take about 90 seconds each. 
+```
+
+Expected output from serving:
+
+```
+(venv) ross@pn50:~/rossgit/holoSeq$ panel serve holoseq_display.py
+(venv) ross@pn50:~/rossgit/holoSeq$ panel
+ERROR: Must specify subcommand, one of: build, bundle, compile, convert, info, init, json, oauth-secret, secret, serve or static
+(venv) ross@pn50:~/rossgit/holoSeq$ panel serve holoseq_display.py
+2024-10-29 17:06:33,645 Starting Bokeh server version 3.6.0 (running on Tornado 6.4.1)
+2024-10-29 17:06:33,646 User authentication hooks NOT provided (default user enabled)
+2024-10-29 17:06:33,649 Bokeh app running at: http://localhost:5006/holoseq_display
+2024-10-29 17:06:33,649 Starting Bokeh server with process id: 388673
+```
+
+#### Proof of concept holoSeq data format disk sizes
+
+Data size on disk using the format in the specification gives more than an order of magnitude, from about 300MB
+of input PAF to 23MB of hseq format data.
+
+Open a browser window at the address shown - default is  http://localhost:5006/holoseq_display
+It will take 20 seconds or so to prepare and show the interactive visualisation.
+The original PAF is 1.2GB and contains about 14M rows.
+About 3.6M pairs of points had both contigs on the mUroPar1 paternal haplotype - so about
+1/4 of all rows. The sample used in the demonstration is a 23M gzip containing all the information needed to plot 
+these 3.6M pairs.
+
+
 
 #### 1. hapsHiCpafHoloview.ipynb is a plotter for paired HiC contact pointss.ss, input as a PAF.
 
