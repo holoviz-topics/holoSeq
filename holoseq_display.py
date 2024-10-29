@@ -115,6 +115,7 @@ def import_holoSeq_data(inFile):
     see https://github.com/fubar2/holoSeq/blob/main/HoloSeqOverview.md 
     """
     haps = {}
+    hh = []
     xcoords = []
     ycoords = []
     annos = []
@@ -122,28 +123,30 @@ def import_holoSeq_data(inFile):
     plotType = None
     title = "Plot"
     with gzip.open(inFile, 'rt') as f:
-
-        for i,row in enumerate(f.readlines()):
+        for i, trow in enumerate(f):
             if i == 0:
-                hseqformat = row.split()
-                if hseqformat[0] not in holoSeqHeaders:
-                    print("Supplied input", inFile, "has a first row =", row,"so is not a valid holoSeq input file")
+                hseqformat = trow.split()[0].strip()
+                if hseqformat not in holoSeqHeaders:
+                    print("Supplied input", inFile, "has a first row =",trow,"so is not a valid holoSeq input file")
                     print("First row must start with one of these:", holoSeqHeaders)
                     return None
-                hsDims = holoSeqHeaders.index(hseqformat[0]) + 1
+                hsDims = holoSeqHeaders.index(hseqformat) + 1
                 if hsDims == "1":
                     plotType = 'bar'
                     if len(hseqformat) > 1:
                         plotType = hseqformat[1].strip()
             else:
-                if row.startswith('@'):
-                    if row.startswith('@title'):
-                        title = row.replace('@title','').strip()
+                if trow.startswith('@'):
+                    row = trow[1:]
+                    if row.startswith('title'):
+                        title = row.replace('title','').strip()
                     else:
                         srow = row.split()
                         if len(srow) >= 3: 
-                            hap, cname, cstart = row.split()[:3]
+                            hap, cname, cstart = srow[:3]
                             if not haps.get(hap, None):
+                                print('adding hap', hap)
+                                hh.append(hap)
                                 haps[hap] = {'cn': [], 'startpos': []}
                             haps[hap]['cn'].append(cname.strip())
                             haps[hap]['startpos'].append(int(cstart.strip()))
@@ -151,11 +154,11 @@ def import_holoSeq_data(inFile):
                             print("Supplied input", inFile, "at row", i, "=", row, "lacking the required reference name, contig name and contig length. Not a valid holoSeq input file")
                             return None
                 else:
-                    srow = [x.strip() for x in row.split()]
+                    srow = [x.strip() for x in trow.split()]
                     lrow = len(srow)
                     if hsDims == 2:
                         if lrow < 2:
-                            print("At row", i, "Supplied 2D input", inFile, "has", row,"which does not parse into x and ycoordinates and optional annotation")
+                            print("At row", i, "Supplied 2D input", inFile, "has", trow,"which does not parse into x and ycoordinates and optional annotation")
                             return None
                         else:
                             if srow[0].isdigit() and srow[1].isdigit():
@@ -164,7 +167,7 @@ def import_holoSeq_data(inFile):
                                 if lrow > 2:
                                     annos.append(srow[2:])
                             else:
-                                print("At row", i, "Supplied 2D input", inFile, "has", row,"which does not parse into x and ycoordinates and optional annotation")
+                                print("At row", i, "Supplied 2D input", inFile, "has", trow,"which does not parse into x and ycoordinates and optional annotation")
                                 return None
                     else:
                         if srow[0].isdigit():
@@ -172,8 +175,11 @@ def import_holoSeq_data(inFile):
                                 if lrow > 1:
                                     annos.append(srow[1:])
                         else:
-                            print("At row", i, "Supplied 1D input", inFile, "has", row,"which does not parse into x coordinate and optional annotation")
+                            print("At row", i, "Supplied 1D input", inFile, "has", trow,"which does not parse into x coordinate and optional annotation")
                             return None
+    print('hh=',hh)
+    sh = hh[0]
+    print('hh=',hh, 'h1 contigs=', haps[sh]['cn'][:20], 'h1 starts=', haps[sh]['startpos'][:20] )
     return((hsDims, haps, xcoords, ycoords, annos, plotType, title))
 
 parser = argparse.ArgumentParser(description="", epilog="")
@@ -201,19 +207,20 @@ haps = []
 print('Read nx=', len(xcoords), 'ny=',len(ycoords))
 h1starts = []
 h1names = []
-for hap in hapsread.keys():
+for i, hap in enumerate(hapsread.keys()):
     haps.append(hap)
     hqstarts[hap] = OrderedDict()
-    for i, contig in enumerate(hapsread[hap]['cn']):
-        cstart = hapsread[hap]['startpos'][i]
+    for j, contig in enumerate(hapsread[hap]['cn']):
+        cstart = hapsread[hap]['startpos'][j]
         hqstarts[hap][contig] = cstart
-        h1starts.append(cstart)
-        h1names.append(contig)
+        if i == 0:
+            h1starts.append(cstart)
+            h1names.append(contig)
 hap = haps[0]
-print('h1names=',h1names)
+print('h1names=',h1names[:20])
 # qtic1 = [(hqstarts[hap][x], x) for x in hqstarts[hap].keys()]
 qtic1 = [(h1starts[i], h1names[i]) for i in range(len(h1starts))]
-print('qtic1=', qtic1)
+print('qtic1=', qtic1[:20])
 isTrans = False
 if hsDims == "2": # may be one or two distinct haplotype identifiers - H1 +/- H2
     if len(haps) > 1:
