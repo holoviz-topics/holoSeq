@@ -18,9 +18,10 @@
 # it works. be happy.
 from bisect import bisect_left
 from collections import OrderedDict
-from functools import cmp_to_key
-import math
+import gzip
 import numpy as np
+import os
+import sys
 
 import holoviews as hv
 import panel as pn
@@ -47,7 +48,7 @@ def getHap(contig):
     return contig[-2:]
 
 
-def xportHtml(fname="export.html", hObj):
+def xportHtml(fname, hObj):
     "save a holoview object to an interactive but not adaptive scaling HTML page"
     hv.save(filename=fname, obj=hObj)
 
@@ -103,7 +104,7 @@ def showTrans(x, y):
     str_pane = pn.pane.Str(
         s,
         styles={"font-size": "10pt", "color": "darkblue", "text-align": "center"},
-        width=ptwidth,
+        width=pcwidth,
     )
     return str_pane
 
@@ -120,23 +121,20 @@ def import_holoSeq_data(inFile):
     plotType = None
     title = "Plot"
     with gzip.open(inFile, 'rt') as f:
-        try:
-            f.peek(1)
-        except gzip.BadGzipFile
-            print(inFile, 'cannot be opened and read as text in gzip format - must be compressed .gz')
-            return None
-        for i,row in enumerate(f.readline()):
+
+        for i,row in enumerate(f.readlines()):
             if i == 0:
                 hseqformat = row.split()
                 if hseqformat[0] not in holoSeqHeaders:
-                    print("Supplied input", inFile, "has a first row =", row,' so is not a valid holoSeq input file")
+                    print("Supplied input", inFile, "has a first row =", row,"so is not a valid holoSeq input file")
                     print("First row must start with one of these:", holoSeqHeaders)
                     return None
-                hsDims = hseqformat[0][-2:-1]
-                if hsDims == "2":
+                hsDims = holoSeqHeaders.index(hseqformat[0]) + 1
+                print('hsDims=', hsDims)
+                if hsDims == "1":
                     plotType = 'bar'
-                if len(hseqformat) > 1:
-                    plotType = hseqformat[1].strip()
+                    if len(hseqformat) > 1:
+                        plotType = hseqformat[1].strip()
             else:
                 if row.startswith('@'):
                     if row.startswith('@title'):
@@ -150,15 +148,14 @@ def import_holoSeq_data(inFile):
                             haps[hap]['cn'].append(cname.strip())
                             haps[hap]['cl'].append(int(clen.strip()))
                         else:
-                            print("Supplied input", inFile, "at row", i, "=", row, "lacking the required reference name, contig name and contig length,
-                             so is not a valid holoSeq input file")
+                            print("Supplied input", inFile, "at row", i, "=", row, "lacking the required reference name, contig name and contig length. Not a valid holoSeq input file")
                             return None
                 else:
                     srow = [x.strip() for x in row.split()]
                     lrow = len(srow)
-                    if hsDims == "2":
+                    if hsDims == 2:
                         if lrow < 2:
-                            print("At row", i, "Supplied 2D input", inFile, "has", row,"which does not parse into x and ycoordinates and optional annotation"
+                            print("At row", i, "Supplied 2D input", inFile, "has", row,"which does not parse into x and ycoordinates and optional annotation")
                             return None
                         else:
                             if srow[0].isdigit() and srow[1].isdigit():
@@ -177,7 +174,6 @@ def import_holoSeq_data(inFile):
                         else:
                             print("At row", i, "Supplied 1D input", inFile, "has", row,"which does not parse into x coordinate and optional annotation")
                             return None
-                    xcoords.append(int(srow[0]))
     return((hsDims, haps, xcoords, ycoords, annos, plotType, title))
 
 pcwidth = 800
@@ -191,17 +187,19 @@ ResampleOperation2D.height = 1500
 # need to convert the categorical contigs into a sequence for holoviews to munch
 # use the contig length from the paf to figure out the cumulative start for each contig
 # contigs are length ordered - that does not always work well when the haplotypes differ widely
-
+inFile = 'test.gz'
+print('Infile = ', inFile)
 hqstarts = OrderedDict()
 hlens = {}
 haps = []
 (hsDims, hapsread, xcoords, ycoords, annos, plotType, plotTitle) = import_holoSeq_data(inFile)
+print(len(xcoords), len(ycoords))
 for hap in hapsread.keys():
     haps.append(hap)
     cum = 1
     hqstarts[hap] = OrderedDict()
     for i, contig in enumerate(hapsread[hap]['cn']):
-        clen = haps[hap]['cl'][i]
+        clen = hapsread[hap]['cl'][i]
         hqstarts[hap][contig] = cum
         cum += clen
 hap = haps[0]

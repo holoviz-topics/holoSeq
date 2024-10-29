@@ -6,22 +6,25 @@
 # typically a suffix like H1 extracted in getHap - rewrite that to suit your names.
 # Contig ordering really matters for the plots to make any sense.
 # Ideally, curators name them so they sort alphanumerically without effort.
-# There's a sorthapqname function that is used here. Designed for the VGP data 
-# Will need to be replaced for other naming conventions. 
+# There's a sorthapqname function that is used here. Designed for the VGP data
+# Will need to be replaced for other naming conventions.
 # It's a mess.
 # Sorting by contig name is based on VGP conventions - SUPER_ first, then scaffolds
 # One problem to watch out for is that any differences in ordering of the X and Y contigs can make all sorts of
 # artifacts appear such as the kaleidoscopic patterns seen in Pretextviewer.
 # Ross Lazarus October 2024
 
-from bisect import bisect_left
 from collections import OrderedDict
 from functools import cmp_to_key
 import math
 import numpy as np
+import os
+import sys
 
 # inFile = "galaxy_inputs/paf/bothmap.paf.tab.tabular"
 inFile = "/home/ross/rossgit/holoviews-examples/huge.paf"
+
+holoSeqHeaders = ["@v1HoloSeq1D", "@v1HoloSeq2D"]
 
 
 def rotatecoords(x, y, radians=0.7853981633974483, origin=(0, 0)):
@@ -80,31 +83,33 @@ def sorthapqname(s1, s2):
         return s1nn - s2nn
 
 
-def export_mapping(holoSeqId, outFileName, haps, hnames, hlens, x, y, anno):
+def export_mapping(hsId, outFileName, haps, hnames, hlens, x, y, anno):
     """
     @v1HoloSeq2D for example
     """
-    def prepHeader(chaps, hnames, hlens):
+
+    def prepHeader(haps, hnames, hlens, hsId):
         """
-        holoSeq output format 
+        holoSeq output format
         """
-        h = ["@%s %s %d" % (haps[i], hnames[i], hlens[i] for i in range(len(hlens))]
-        h.insert(0, holoSeqID)
+        h = ["@%s %s %d" % (haps[i], hnames[i], hlens[i]) for i in range(len(hlens))]
+        h.insert(0, hsId)
         return h
 
-    hdr = prepeHeader(haps, hnames, hlens)
+    hdr = prepHeader(haps, hnames, hlens, hsId)
     with open(outFileName, "w") as ofn:
-        ofn.write('\n'.join(hdr))
-        if len(anno) = len(x):
-            for i in range(len(x):
+        ofn.write("\n".join(hdr))
+        if len(anno) == len(x):
+            for i in range(len(x)):
                 row = "%d %d %s\n" % (x[i], y[i], anno[i])
-                f.write(row)
+                ofn.write(row)
         else:
-            for i in range(len(x):
+            for i in range(len(x)):
                 row = "%d %d\n" % (x[i], y[i])
-                f.write(row))
+                ofn.write(row)
 
-
+inFile = sys.argv[1]
+print('inFile=', inFile)
 hlstarts = OrderedDict()
 hqstarts = OrderedDict()
 hlens = {}
@@ -116,16 +121,22 @@ with open(inFile, "r") as f:
         row = rows.split()
         c1 = row[0]
         c2 = row[5]
-        hap = getHap(c1)
-        if hap not in haps:
-            haps.append(hap)
-            hlens[hap] = {}
-            hlsorts[hap] = []
-            hqsorts[hap] = []
-        if not hlens[hap].get(c1, None):
-            hlens[hap][c1] = int(row[1])
-            hlsorts[hap].append((int(row[1]), c1))
-            hqsorts[hap].append((c1, int(row[1])))
+        for hap in [getHap(c1), getHap(c2)]:
+            if hap not in haps:
+                haps.append(hap)
+                hlens[hap] = {}
+                hlsorts[hap] = []
+                hqsorts[hap] = []
+        hp = getHap(c1)   
+        if not hlens[hp].get(c1, None):
+            hlens[hp][c1] = int(row[1])
+            hlsorts[hp].append((int(row[1]), c1))
+            hqsorts[hp].append((c1, int(row[1])))
+        hp = getHap(c2)   
+        if not hlens[hp].get(c2, None):
+            hlens[hp][c2] = int(row[6])
+            hlsorts[hap].append((int(row[6]), c2))
+            hqsorts[hap].append((c2, int(row[6])))
 for hap in haps:
     cum = 1
     hlsorts[hap].sort(reverse=True)
@@ -139,16 +150,18 @@ for hap in haps:
     for contig, clen in hqsorts[hap]:
         hqstarts[hap][contig] = cum
         cum += clen
+print('hqstarts=',hqstarts)
 h1starts = [hqstarts[haps[0]][x] for x in hqstarts[haps[0]].keys()]
 h1names = list(hqstarts[haps[0]].keys())
-h2starts = [hqstarts[haps[1]][x] for x in hqstarts[haps[1]].keys()]
-h2names = list(hqstarts[haps[1]].keys())
+if len(haps) > 1:
+    h2starts = [hqstarts[haps[1]][x] for x in hqstarts[haps[1]].keys()]
+    h2names = list(hqstarts[haps[1]].keys())
 # have the axes set up so prepare the three plot x/y vectors
 # for a second pass to calculate all the coordinates.
 # adding tooltips just does not scale so abando - see the tooltip old version
-cis1 = {"x":[], "y":[]}
-cis2 = {"x":[], "y":[]}
-trans1 = {"x":[], "y":[]}
+cis1 = {"x": [], "y": []}
+cis2 = {"x": [], "y": []}
+trans1 = {"x": [], "y": []}
 with open(inFile, "r") as f:
     for rows in f:
         row = rows.split()
@@ -158,15 +171,26 @@ with open(inFile, "r") as f:
         H2 = getHap(c2)
         if H1 != H2:  # trans
             if H1 == haps[0]:  # x is h1 for trans - otherwise ignore
-                trans1['x'].append(hqstarts[H1][c1] + int(row[2]))
-                trans1['y'].append(hqstarts[H2][c2] + int(row[7]))
+                trans1["x"].append(hqstarts[H1][c1] + int(row[2]))
+                trans1["y"].append(hqstarts[H2][c2] + int(row[7]))
             else:
-                trans1['y'].append(hqstarts[H1][c1] + int(row[2]))
-                trans1['x'].append(hqstarts[H2][c2] + int(row[7]))
+                trans1["y"].append(hqstarts[H1][c1] + int(row[2]))
+                trans1["x"].append(hqstarts[H2][c2] + int(row[7]))
         else:  # cis
-            if H1 == haps[0]:                
-                cis1['x'].append(hqstarts[H1][c1] + int(row[2]))
-                cis1['y'].append(hqstarts[H2][c2] + int(row[7]))
-            else:               
-                cis2['x'].append(hqstarts[H1][c1] + int(row[2]))
-                cis2['y'].append(hqstarts[H2][c2] + int(row[7]))
+            if H1 == haps[0]:
+                cis1["x"].append(hqstarts[H1][c1] + int(row[2]))
+                cis1["y"].append(hqstarts[H1][c2] + int(row[7]))
+            else:
+                cis2["x"].append(hqstarts[H1][c1] + int(row[2]))
+                cis2["y"].append(hqstarts[H1][c2] + int(row[7]))
+outPrefix = os.path.basename(inFile)
+export_mapping(
+    holoSeqHeaders[1],
+    "%s_cis1.hseq" % outPrefix,
+    haps[0]*len(h1names),
+    h1names,
+    h1starts,
+    cis1["x"],
+    cis1["y"],
+    [],
+)
