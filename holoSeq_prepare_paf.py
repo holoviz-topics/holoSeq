@@ -16,6 +16,7 @@
 
 from collections import OrderedDict
 from functools import cmp_to_key
+import gzip
 import math
 import numpy as np
 import os
@@ -92,20 +93,23 @@ def export_mapping(hsId, outFileName, haps, hnames, hlens, x, y, anno):
         """
         holoSeq output format
         """
-        h = ["@%s %s %d" % (haps[i], hnames[i], hlens[i]) for i in range(len(hlens))]
+        h = ["%s%s %s %d" % ('@', haps[i], hnames[i], hlens[i]) for i in range(len(hlens))]
         h.insert(0, hsId)
         return h
 
     hdr = prepHeader(haps, hnames, hlens, hsId)
-    with open(outFileName, "w") as ofn:
-        ofn.write("\n".join(hdr))
+
+    print('haps =', haps)
+    print('header=', hdr)
+    with gzip.open(outFileName, mode='wb') as ofn:
+        ofn.write(str.encode('\n'.join(hdr) + '\n'))
         if len(anno) == len(x):
             for i in range(len(x)):
-                row = "%d %d %s\n" % (x[i], y[i], anno[i])
+                row = str.encode("%d %d %s\n" % (x[i], y[i], anno[i]))
                 ofn.write(row)
         else:
             for i in range(len(x)):
-                row = "%d %d\n" % (x[i], y[i])
+                row = str.encode("%d %d\n" % (x[i], y[i]))
                 ofn.write(row)
 
 inFile = sys.argv[1]
@@ -137,6 +141,7 @@ with open(inFile, "r") as f:
             hlens[hp][c2] = int(row[6])
             hlsorts[hap].append((int(row[6]), c2))
             hqsorts[hap].append((c2, int(row[6])))
+print(haps)
 for hap in haps:
     cum = 1
     hlsorts[hap].sort(reverse=True)
@@ -184,10 +189,11 @@ with open(inFile, "r") as f:
                 cis2["x"].append(hqstarts[H1][c1] + int(row[2]))
                 cis2["y"].append(hqstarts[H1][c2] + int(row[7]))
 outPrefix = os.path.basename(inFile)
+hap = haps[0]
 export_mapping(
     holoSeqHeaders[1],
-    "%s_cis1.hseq" % outPrefix,
-    haps[0]*len(h1names),
+    "%s_cis1.hseq.gz" % outPrefix,
+    [hap for i in range(len(h1names))],
     h1names,
     h1starts,
     cis1["x"],

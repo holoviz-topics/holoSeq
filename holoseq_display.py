@@ -131,7 +131,6 @@ def import_holoSeq_data(inFile):
                     print("First row must start with one of these:", holoSeqHeaders)
                     return None
                 hsDims = holoSeqHeaders.index(hseqformat[0]) + 1
-                print('hsDims=', hsDims)
                 if hsDims == "1":
                     plotType = 'bar'
                     if len(hseqformat) > 1:
@@ -143,11 +142,11 @@ def import_holoSeq_data(inFile):
                     else:
                         srow = row.split()
                         if len(srow) >= 3: 
-                            hap, cname, clen = row.split()[:3]
+                            hap, cname, cstart = row.split()[:3]
                             if not haps.get(hap, None):
-                                haps[hap] = {'cn': [], 'cl': []}
+                                haps[hap] = {'cn': [], 'startpos': []}
                             haps[hap]['cn'].append(cname.strip())
-                            haps[hap]['cl'].append(int(clen.strip()))
+                            haps[hap]['startpos'].append(int(cstart.strip()))
                         else:
                             print("Supplied input", inFile, "at row", i, "=", row, "lacking the required reference name, contig name and contig length. Not a valid holoSeq input file")
                             return None
@@ -199,15 +198,13 @@ hqstarts = OrderedDict()
 hlens = {}
 haps = []
 (hsDims, hapsread, xcoords, ycoords, annos, plotType, plotTitle) = import_holoSeq_data(inFile)
-print(len(xcoords), len(ycoords))
+print('Read nx=', len(xcoords), 'ny=',len(ycoords))
 for hap in hapsread.keys():
     haps.append(hap)
-    cum = 1
     hqstarts[hap] = OrderedDict()
     for i, contig in enumerate(hapsread[hap]['cn']):
-        clen = hapsread[hap]['cl'][i]
-        hqstarts[hap][contig] = cum
-        cum += clen
+        cstart = hapsread[hap]['startpos'][i]
+        hqstarts[hap][contig] = cstart
 hap = haps[0]
 h1starts = [hqstarts[hap][x] for x in hqstarts[haps[0]].keys()]
 h1names = list(hqstarts[hap].keys())
