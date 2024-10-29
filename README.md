@@ -7,7 +7,8 @@
 
 #### Project status
 
-This is new work in progress. 
+This is new work in progress. Help wanted. PR and suggestions welcomed.
+
 Development started in late October 2024. 
 A draft framework [specification is here.](https://github.com/fubar2/holoSeq/blob/main/HoloSeqOverview.md). 
 
@@ -18,7 +19,6 @@ that the virtual environment directory can be made and deleted without any other
 
 CD to the cloned directory. 
 Prepare the python virtual environment needed, then run the panel application using something like the commands below. 
-
 
 ```
 python -m venv venv
@@ -91,15 +91,14 @@ else
 }
 
 ```
-A conversion utility is provided for PAF inputs. 
+A conversion utility is provided for PAF inputs, that works with the awk output. 
 
-The demonstration data were prepared using:
+The compressed demonstration plotting data were prepared using:
 
 `python holoSeq_prepare_paf.py --inFile mUroPar1.paf --title "VGP Arctic Ground Squirrel arima HiC contact matrix, paternal haplotype" `
 
-This step produces outputs containing subsets of contact point pairs such as
-
-`mUroPar1.paf_cis1.hseq.gz`
+This step produces outputs containing subsets of contact point pairs. Only one `mUroPar1.paf_cis1.hseq.gz` is currently created.
+This is a WIP.
 
 These can be viewed like the supplied local demonstration example using panel.
 
