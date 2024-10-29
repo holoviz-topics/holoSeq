@@ -14,13 +14,14 @@
 # artifacts appear such as the kaleidoscopic patterns seen in Pretextviewer.
 # Ross Lazarus October 2024
 
+import argparse
+
 from collections import OrderedDict
 from functools import cmp_to_key
 import gzip
 import math
 import numpy as np
 import os
-import sys
 
 # inFile = "galaxy_inputs/paf/bothmap.paf.tab.tabular"
 inFile = "/home/ross/rossgit/holoviews-examples/huge.paf"
@@ -84,20 +85,21 @@ def sorthapqname(s1, s2):
         return s1nn - s2nn
 
 
-def export_mapping(hsId, outFileName, haps, hnames, hlens, x, y, anno):
+def export_mapping(hsId, outFileName, haps, hnames, hlens, x, y, anno, title):
     """
     @v1HoloSeq2D for example
     """
 
-    def prepHeader(haps, hnames, hlens, hsId):
+    def prepHeader(haps, hnames, hlens, hsId, title):
         """
         holoSeq output format
         """
-        h = ["%s%s %s %d" % ('@', haps[i], hnames[i], hlens[i]) for i in range(len(hlens))]
+        h = ["@%s %s %d" % (haps[i], hnames[i], hlens[i]) for i in range(len(hlens))]
+        h.insert(0, '@title %s' % title)
         h.insert(0, hsId)
         return h
 
-    hdr = prepHeader(haps, hnames, hlens, hsId)
+    hdr = prepHeader(haps, hnames, hlens, hsId, title)
 
     print('haps =', haps)
     print('header=', hdr)
@@ -112,7 +114,12 @@ def export_mapping(hsId, outFileName, haps, hnames, hlens, x, y, anno):
                 row = str.encode("%d %d\n" % (x[i], y[i]))
                 ofn.write(row)
 
-inFile = sys.argv[1]
+parser = argparse.ArgumentParser(description="", epilog="")
+parser.add_argument("--inFile", help="PAF with paired alignments", default="mUroPar1.paf")
+parser.add_argument("--title", help="Title for the plot", default="Plot title goes here")
+parser.add_argument("--version", "-V", action="version", version='0.1')
+args = parser.parse_args()
+inFile = args.inFile
 print('inFile=', inFile)
 hlstarts = OrderedDict()
 hqstarts = OrderedDict()
@@ -141,7 +148,6 @@ with open(inFile, "r") as f:
             hlens[hp][c2] = int(row[6])
             hlsorts[hap].append((int(row[6]), c2))
             hqsorts[hap].append((c2, int(row[6])))
-print(haps)
 for hap in haps:
     cum = 1
     hlsorts[hap].sort(reverse=True)
@@ -199,4 +205,5 @@ export_mapping(
     cis1["x"],
     cis1["y"],
     [],
+    args.title
 )

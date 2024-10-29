@@ -34,13 +34,12 @@ panel serve holoseq_display.py --args --inFile mUroPar1_cis1.hseq.gz --size 1000
 Expected output from serving:
 
 ```
-(venv) ross@pn50:~/rossgit/holoSeq$ panel serve holoseq_display.py --args --inFile mUroPar1_cis1.hseq.gz
+(venv) ross@pn50:~/rossgit/holoSeq$ panel serve holoseq_display.py --args --inFile mUroPar1_cis1.hseq.gz --size 1000
 2024-10-29 17:06:33,645 Starting Bokeh server version 3.6.0 (running on Tornado 6.4.1)
 2024-10-29 17:06:33,646 User authentication hooks NOT provided (default user enabled)
 2024-10-29 17:06:33,649 Bokeh app running at: http://localhost:5006/holoseq_display
 2024-10-29 17:06:33,649 Starting Bokeh server with process id: 388673
 ```
-
 Open a browser window at the address shown.
 
 - It will take 20 seconds or so to show the interactive visualisation.
@@ -52,20 +51,61 @@ Open a browser window at the address shown.
 #### Proof of concept holoSeq data format disk sizes
 
 Data size on disk using the format in the specification gives more than an order of magnitude, from about 300MB
-of input PAF to 23MB of gzipped hseq format data.
+of input PAF to 23MB of hseq format data.
 
+Open a browser window at the address shown - default is  http://localhost:5006/holoseq_display
+It will take 20 seconds or so to prepare and show the interactive visualisation.
 The original PAF is 1.2GB and contains about 14M rows.
 About 3.6M pairs of points had both contigs on the mUroPar1 paternal haplotype - so about
-1/4 of all rows. 
-
-The sample used in the demonstration is a 23M gzip containing all the information needed to plot 
+1/4 of all rows. The sample used in the demonstration is a 23M gzip containing all the information needed to plot 
 these 3.6M pairs.
 
-#### 1. hapsHiCpafHoloview.ipynb is a plotter for paired HiC contact point pairs, input as a PAF.
+#### Prepare a PAF file containing the points to be plotted
+
+The demonstration compressed holoSeq plot information was prepared with a PAF file prepared in a Galaxy VGP workflow, mapping the arima HiC reads
+against the assembled haplotypes, running Bellerophon to remove chimeric Arima reads into a bam of pairs. These are converted to a sam file with header
+using samtools view, and processed into a PAF with an AWK script
+
+```
+#!/bin/awk -f
+{ 
+if ($1=="@SQ") { chromlen[substr($2,4)] = substr($3,4) }
+else
+if (substr($1,0,1) == "@") {foo = 1}
+else
+{
+if ($2 AND 16) { sign1="-"};
+ 
+if (! ($2 AND 16)) { sign1="+"};
+
+if ($2 AND 32) { sign2="-"};
+
+if (! ($2 AND 32)) { sign2="+"};
+
+if ($7 == "=") 
+{ printf ("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", $3, chromlen[$3], $4, $4+length($10), sign1, $3, chromlen[$3], $8, $8 + length($10), length($10), length($10), 255)}
+else
+{ printf ("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", $3, chromlen[$3], $4, $4+length($10), sign1, $7, chromlen[$7], $8, $8 + length($10), length($10), length($10), 255)}
+}
+}
+
+```
+A conversion utility is provided for PAF inputs. The demonstration data were prepared using:
+
+`python holoSeq_prepare_paf.py --inFile mUroPar1.paf --title "VGP Arctic Ground Squirrel arima HiC contact matrix, paternal haplotype" `
+
+This step produces outputs containing subsets of contact point pairs such as
+
+`mUroPar1.paf_cis1.hseq.gz`
+
+These can be viewed like the supplied local demonstration example using panel.
+
+### 1. hapsHiCpafHoloview.ipynb is a plotter for paired HiC contact pointss.ss, input as a PAF.
 
 This is from the Arctic Ground Squirrel mUroPar1 HiC VGP data. It shows the three images and about 14 million points.
 
 <img src="https://github.com/user-attachments/assets/e288f295-84b0-4121-9099-db5007445a27" alt="h1-h1, h2-h2 pairs" width="800"/>
+
 
 The matrix is symmetrical so only one half is needed but it is visually more impressive as shown
 
