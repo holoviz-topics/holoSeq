@@ -28,6 +28,7 @@ Expect to see:
 2024-10-29 17:06:33,649 Starting Bokeh server with process id: 388673
 ```
 No processing will take place until a browser window is opened at the address shown, and it will take 10-20 seconds to read the 3.4M pairs and to show the interactive visualisation.
+
 When it appears:
 - Mouse click anywhere on the plot to see the coordinates.
 - Zoom with the mouse scroll wheel
@@ -35,28 +36,19 @@ When it appears:
 - Usual `Bokeh` display controls are available on the sidebar.
 - Only pairs involving H1 contigs (H1 cis) are used in the demonstration.
 
-Briefly, the framework is built around an optionally gzipped text data format, that supplies pre-computed plot coordinates, with a header 
-describing the reference sequence or sequences forming the plot axes. Converters for common genomic annotation formats, such as PAF, bigwig and bed
-will be provided. 
+Briefly, the framework uses the [minimum data required](https://github.com/fubar2/holoSeq/blob/main/HoloSeqOverview.md) to create a plot.
+The display application is given pre-computed plot coordinates, and enough header information about the reference sequence or sequences, 
+to add tic marks to the axes and to back-calculate the stream of user tap coordinates. A converter for PAF to compressed hseq format for input is 
+available and was used to generate the demonstration. Other common genomic annotation formats, such as bigwig and bed will be provided. 
+Scaling and zooming rely on datashader running on a Holoviews or Bokeh server. Static images can be captured. 
+Interactive HTML can be exported, but without a datashader provider, zoomed detail is limited. 
 
-This design isolates the complexities of displaying many different kinds of annotation at genomic scale, from the details of converting a zoo of data
-from external sources in important standard formats. Any number of input files can be supplied to the generic IPython notebook, where
-they are automatically organised and displayed. Scaling and zooming rely on datashader running on a Holoviews or Bokeh server. 
-Static images can be captured. Interactive HTML can be exported, but without a datashader provider, zoomed detail is limited. 
-
-As proof of concept, a genomic HiC contact pair viewer that can show the entire map of 14 million pairs and any level of
-zoom down to individual contact pair points is provided. Screenshots below use Arima HiC reads from the VGP *mUroPar1* Arctic Ground Squirrel, 
-processed through a Galaxy workflow.
-
-#### Proof of concept holoSeq data format disk sizes
+#### holoSeq data format disk sizes
 
 Data size on disk using the format in the specification gives more than an order of magnitude, from about 300MB
 of input PAF to 23MB of hseq format data.
 
-Open a browser window at the address shown - default is  http://localhost:5006/holoseq_display
-It will take 20 seconds or so to prepare and show the interactive visualisation.
-The original PAF is 1.2GB and contains about 14M rows.
-About 3.6M pairs of points had both contigs on the mUroPar1 paternal haplotype - so about
+The original PAF is 1.2GB and contains about 14M rows. About 3.6M pairs of points had both contigs on the mUroPar1 paternal haplotype - so about
 1/4 of all rows. The sample used in the demonstration is a 23M gzip containing all the information needed to plot 
 these 3.6M pairs.
 
@@ -90,7 +82,9 @@ else
 }
 
 ```
-A conversion utility is provided for PAF inputs. The demonstration data were prepared using:
+A conversion utility is provided for PAF inputs. 
+
+The demonstration data were prepared using:
 
 `python holoSeq_prepare_paf.py --inFile mUroPar1.paf --title "VGP Arctic Ground Squirrel arima HiC contact matrix, paternal haplotype" `
 
