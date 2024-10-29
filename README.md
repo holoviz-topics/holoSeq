@@ -7,6 +7,34 @@
 
 A draft framework [specification is here.](https://github.com/fubar2/holoSeq/blob/main/HoloSeqOverview.md). 
 
+#### Quick start: Install and test the local demonstration
+
+From the directory where you have cloned this repository, prepare the python virtual environment needed, then run the panel application.
+
+```
+python -m venv venv
+. venv/bin/activate
+pip install -r requirements.txt 
+panel serve holoseq_display.py --args --inFile mUroPar1_cis1.hseq.gz --size 1000
+```
+
+Expect to see:
+
+```
+(venv) ross@pn50:~/rossgit/holoSeq$ panel serve holoseq_display.py --args --inFile mUroPar1_cis1.hseq.gz --size 1000
+2024-10-29 17:06:33,645 Starting Bokeh server version 3.6.0 (running on Tornado 6.4.1)
+2024-10-29 17:06:33,646 User authentication hooks NOT provided (default user enabled)
+2024-10-29 17:06:33,649 Bokeh app running at: http://localhost:5006/holoseq_display
+2024-10-29 17:06:33,649 Starting Bokeh server with process id: 388673
+```
+No processing will take place until a browser window is opened at the address shown, and it will take 10-20 seconds to read the 3.4M pairs and to show the interactive visualisation.
+When it appears:
+- Mouse click anywhere on the plot to see the coordinates.
+- Zoom with the mouse scroll wheel
+- Pan by grabbing with the left mouse button.
+- Usual `Bokeh` display controls are available on the sidebar.
+- Only pairs involving H1 contigs (H1 cis) are used in the demonstration.
+
 Briefly, the framework is built around an optionally gzipped text data format, that supplies pre-computed plot coordinates, with a header 
 describing the reference sequence or sequences forming the plot axes. Converters for common genomic annotation formats, such as PAF, bigwig and bed
 will be provided. 
@@ -19,34 +47,6 @@ Static images can be captured. Interactive HTML can be exported, but without a d
 As proof of concept, a genomic HiC contact pair viewer that can show the entire map of 14 million pairs and any level of
 zoom down to individual contact pair points is provided. Screenshots below use Arima HiC reads from the VGP *mUroPar1* Arctic Ground Squirrel, 
 processed through a Galaxy workflow.
-
-
-#### Install and test the local demonstration
-In the directory where you have cloned this repository,
-
-```
-python -m venv venv
-. venv/bin/activate
-pip install -r requirements.txt 
-panel serve holoseq_display.py --args --inFile mUroPar1_cis1.hseq.gz --size 1000
-```
-
-Expected output from serving:
-
-```
-(venv) ross@pn50:~/rossgit/holoSeq$ panel serve holoseq_display.py --args --inFile mUroPar1_cis1.hseq.gz --size 1000
-2024-10-29 17:06:33,645 Starting Bokeh server version 3.6.0 (running on Tornado 6.4.1)
-2024-10-29 17:06:33,646 User authentication hooks NOT provided (default user enabled)
-2024-10-29 17:06:33,649 Bokeh app running at: http://localhost:5006/holoseq_display
-2024-10-29 17:06:33,649 Starting Bokeh server with process id: 388673
-```
-Open a browser window at the address shown.
-
-- It will take 20 seconds or so to show the interactive visualisation.
-- Try a mouse click anywhere on the display to see the coordinates.
-- Try zooming with the mouse scroll wheel and panning by grabbing with the left button.
-- Other usual `Bokeh` display controls are available on the sidebar.
-- Pairs involving only H1 contigs (H1 cis) are used in the demonstration.
 
 #### Proof of concept holoSeq data format disk sizes
 
