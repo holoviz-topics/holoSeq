@@ -34,16 +34,16 @@ panel serve holoseq_display.py --args --inFile mUroPar1_cis1.hseq.gz --size 1000
 Expected output from serving:
 
 ```
-(venv) ross@pn50:~/rossgit/holoSeq$ panel serve holoseq_display.py
+(venv) ross@pn50:~/rossgit/holoSeq$ panel serve holoseq_display.py --args --inFile mUroPar1_cis1.hseq.gz
 2024-10-29 17:06:33,645 Starting Bokeh server version 3.6.0 (running on Tornado 6.4.1)
 2024-10-29 17:06:33,646 User authentication hooks NOT provided (default user enabled)
 2024-10-29 17:06:33,649 Bokeh app running at: http://localhost:5006/holoseq_display
 2024-10-29 17:06:33,649 Starting Bokeh server with process id: 388673
 ```
 
-Open a browser window at the address shown - default is  http://localhost:5006/holoseq_display
+Open a browser window at the address shown.
 
-- It will take 20 seconds or so to prepare and show the interactive visualisation.
+- It will take 20 seconds or so to show the interactive visualisation.
 - Try a mouse click anywhere on the display to see the coordinates.
 - Try zooming with the mouse scroll wheel and panning by grabbing with the left button.
 - Other usual `Bokeh` display controls are available on the sidebar.
