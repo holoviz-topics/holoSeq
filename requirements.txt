@@ -1,0 +1,5 @@
+datashader 
+dask[dataframe] 
+holoviews[recommended] 
+pandas 
+bokeh
