@@ -23,12 +23,12 @@ processed through a Galaxy workflow.
 
 #### Install and test the local demonstration
 In the directory where you have cloned this repository,
+
 ```
 python -m venv venv
 . venv/bin/activate
 pip install -r requirements.txt 
-panel serve holoseq_display.py
-
+panel serve holoseq_display.py --args --inFile mUroPar1_cis1.hseq.gz 
 ```
 
 Expected output from serving:
@@ -41,19 +41,24 @@ Expected output from serving:
 2024-10-29 17:06:33,649 Starting Bokeh server with process id: 388673
 ```
 
+Open a browser window at the address shown - default is  http://localhost:5006/holoseq_display
+
+- It will take 20 seconds or so to prepare and show the interactive visualisation.
+- Try a mouse click anywhere on the display to see the coordinates.
+- Try zooming with the mouse scroll wheel and panning by grabbing with the left button.
+- Other usual `Bokeh` display controls are available on the sidebar.
+
 #### Proof of concept holoSeq data format disk sizes
 
 Data size on disk using the format in the specification gives more than an order of magnitude, from about 300MB
-of input PAF to 23MB of hseq format data.
+of input PAF to 23MB of gzipped hseq format data.
 
-Open a browser window at the address shown - default is  http://localhost:5006/holoseq_display
-It will take 20 seconds or so to prepare and show the interactive visualisation.
 The original PAF is 1.2GB and contains about 14M rows.
 About 3.6M pairs of points had both contigs on the mUroPar1 paternal haplotype - so about
-1/4 of all rows. The sample used in the demonstration is a 23M gzip containing all the information needed to plot 
+1/4 of all rows. 
+
+The sample used in the demonstration is a 23M gzip containing all the information needed to plot 
 these 3.6M pairs.
-
-
 
 #### 1. hapsHiCpafHoloview.ipynb is a plotter for paired HiC contact pointss.ss, input as a PAF.
 
