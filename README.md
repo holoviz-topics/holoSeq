@@ -28,7 +28,7 @@ In the directory where you have cloned this repository,
 python -m venv venv
 . venv/bin/activate
 pip install -r requirements.txt 
-panel serve holoseq_display.py --args --inFile mUroPar1_cis1.hseq.gz 
+panel serve holoseq_display.py --args --inFile mUroPar1_cis1.hseq.gz --size 1000
 ```
 
 Expected output from serving:
