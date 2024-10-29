@@ -1,15 +1,24 @@
-# holoSeq
+# holoSeq: Interactive viewing of genomic annotation
 
-#### Interactive visualisations with tens of millions of genomic annotation features.
-*Designed for Galaxy interactive tools but works on a laptop. Built on the [Holoviews](https://holoviews.org/) and IPython notebook ecosystem.*
+#### Manage millions of features in a laptop browser window
+*Designed for Galaxy interactive tools. Works on a laptop. Built on the [Holoviews](https://holoviews.org/) and IPython notebook ecosystem.*
 
 <img src="https://github.com/fubar2/hv-notebooks/blob/main/h2.gif" alt="zoom demo" width="125"/>       <img src="https://github.com/fubar2/hv-notebooks/blob/main/h1.gif" alt="zoom demo" width="125"/>
 
+#### Project status
+
+This is new work in progress. Help wanted. PR and suggestions welcomed.
+
+Development started in late October 2024. 
 A draft framework [specification is here.](https://github.com/fubar2/holoSeq/blob/main/HoloSeqOverview.md). 
 
-#### Quick start: Install and test the local demonstration
+#### Quick start - clone this repository and run the demonstration
 
-From the directory where you have cloned this repository, prepare the python virtual environment needed, then run the panel application.
+Assumes you have python and the python-venv module installed. This process ensures
+that the virtual environment directory can be made and deleted without any other changes to your system.
+
+CD to the cloned directory. 
+Prepare the python virtual environment needed, then run the panel application using something like the commands below. 
 
 ```
 python -m venv venv
@@ -29,11 +38,11 @@ Expect to see:
 ```
 No processing will take place until a browser window is opened at the address shown, and it will take 10-20 seconds to read the 3.4M pairs and to show the interactive visualisation.
 
-When it appears:
+When the plot appears, the view is controlled by the usual Bokeh tools in the toolbar on the left of the plot.
+
 - Mouse click anywhere on the plot to see the coordinates.
 - Zoom with the mouse scroll wheel
 - Pan by grabbing with the left mouse button.
-- Usual `Bokeh` display controls are available on the sidebar.
 - Only pairs involving H1 contigs (H1 cis) are used in the demonstration.
 
 Briefly, the framework uses the [minimum data required](https://github.com/fubar2/holoSeq/blob/main/HoloSeqOverview.md) to create a plot.
@@ -82,15 +91,14 @@ else
 }
 
 ```
-A conversion utility is provided for PAF inputs. 
+A conversion utility is provided for PAF inputs, that works with the awk output. 
 
-The demonstration data were prepared using:
+The compressed demonstration plotting data were prepared using:
 
 `python holoSeq_prepare_paf.py --inFile mUroPar1.paf --title "VGP Arctic Ground Squirrel arima HiC contact matrix, paternal haplotype" `
 
-This step produces outputs containing subsets of contact point pairs such as
-
-`mUroPar1.paf_cis1.hseq.gz`
+This step produces outputs containing subsets of contact point pairs. Only one `mUroPar1.paf_cis1.hseq.gz` is currently created.
+This is a WIP.
 
 These can be viewed like the supplied local demonstration example using panel.
 
