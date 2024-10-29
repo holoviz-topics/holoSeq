@@ -5,8 +5,11 @@ as 1D charts or 2D heatmaps using a generic visualisation infrastructure built u
 
 The presentation layer is designed for large scale data associated with a genomic reference or other sequence. It can pan and zoom smoothly from whole genomes down to 
 individual points with tens of millions of rows of data, in a web browser running on a suitable laptop or in Galaxy. The data format
-provides all the information needed for accurate plotting, on the inbuilt reference sequence coordinates, in a very sparse form. Redundancy in the
-contigs and lengths in each header, is acceptable in the context of millions of subsequent data points.
+provides all the information needed for accurate plotting, on the inbuilt reference sequence coordinates, in a very sparse form. 
+
+The design isolates the complexities of displaying many different kinds of annotation at genomic scale, from the messy challenges of converting the 
+zoo of external data in important standard formats. The intention is to allow any number of input files to be supplied to the generic IPython notebook, where
+they are automatically organised and displayed. 
 
 ### Potential sources of annotation for display
 
@@ -34,16 +37,14 @@ In addition to either one or two coordinates, features may have additional annot
 
 ## Input format for 1D and 2D features on pre-mapped axis coordinates
 
-The input file may be a gzip in which case it will be uncompressed.
+The converters will produce gzip compressed text files. The data must start with a header section,where every row starts with `@`.
 
-The text data must start with a header section describing the data, where every row starts with `@`.
+The first row of the must be either `@v1HoloSeq1D [chart type | bar]` or `@v1HoloSeq2D`, or the data will not be processed.
 
-The first row of the (uncompressed) header must be either `@v1HoloSeq1D [chart type | bar]` or `@v1HoloSeq2D` or the data will not be processed.
-
-For 1D data, the chart type may be one of bar, scatter or line. Default is bar. Regions with 4 or more SD above or below the global mean are 
+For 1D data, the chart type may be one of `bar`, `scatter` or `line`. Default is `bar`. Regions with 4 or more SD above or below the global mean are 
 emphasised
 
-2D data will be presented as an autoscaling density heatmap. The header and data may have 1 axis name, for example where HiC pairs from one haplotype are plotted
+2D data will be presented as an autoscaling density heatmap. The header and data might only have 1 axis name, for example where HiC pairs from one haplotype are plotted
 with that sequence on both axes, or 2 axis names, if HiC pairs involving both haplotypes, one on each axis, are being plotted.
 
 The subsequent header rows must have the axis names, contig names and their lengths, delimited by whitespace, and starting with `@` such as
@@ -88,6 +89,6 @@ Tap coordinates are calculated from a stream giving the tap x and y coordinates,
 
 The visualisation can be run locally and viewed in a desktop browser using 
 
-`panel serve [notebookname].ipynb --args foo=23 bar=./readme.paf`
+`panel serve [notebookname].ipynb --args --foo 23 --bar ./my_hseq.gz`
 
 
