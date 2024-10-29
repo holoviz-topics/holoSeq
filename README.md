@@ -47,6 +47,7 @@ Open a browser window at the address shown.
 - Try a mouse click anywhere on the display to see the coordinates.
 - Try zooming with the mouse scroll wheel and panning by grabbing with the left button.
 - Other usual `Bokeh` display controls are available on the sidebar.
+- Pairs involving only H1 contigs (H1 cis) are used in the demonstration.
 
 #### Proof of concept holoSeq data format disk sizes
 
@@ -60,12 +61,11 @@ About 3.6M pairs of points had both contigs on the mUroPar1 paternal haplotype -
 The sample used in the demonstration is a 23M gzip containing all the information needed to plot 
 these 3.6M pairs.
 
-#### 1. hapsHiCpafHoloview.ipynb is a plotter for paired HiC contact pointss.ss, input as a PAF.
+#### 1. hapsHiCpafHoloview.ipynb is a plotter for paired HiC contact point pairs, input as a PAF.
 
 This is from the Arctic Ground Squirrel mUroPar1 HiC VGP data. It shows the three images and about 14 million points.
 
 <img src="https://github.com/user-attachments/assets/e288f295-84b0-4121-9099-db5007445a27" alt="h1-h1, h2-h2 pairs" width="800"/>
-
 
 The matrix is symmetrical so only one half is needed but it is visually more impressive as shown
 
