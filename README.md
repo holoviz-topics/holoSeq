@@ -98,6 +98,8 @@ The compressed demonstration plotting data were prepared using:
 
 `python holoSeq_prepare_paf.py --inFile mUroPar1.paf --title "VGP Arctic Ground Squirrel arima HiC contact matrix, paternal haplotype" `
 
+for Mashmap paf, `python holoSeq_prepare_paf.py --inFile  hg002_2k99.paf --title "hg002 Mashmap" --hap_indicator None --contig_sort length`
+
 This step produces outputs containing subsets of contact point pairs. Only one `mUroPar1.paf_cis1.hseq.gz` is currently created.
 This is a WIP.
 
