@@ -339,6 +339,7 @@ p1 = pn.Column(
                 scalebar_range="x",
                 scalebar_location="top_left",
                 scalebar_unit=("bp"),
+                show_grid=True,
             )
         )
     ),
@@ -366,6 +367,7 @@ p2 = pn.Column(
                 scalebar_range="x",
                 scalebar_location="top_left",
                 scalebar_unit=("bp"),
+                show_grid=True,
             )
         )
     ),
@@ -396,10 +398,11 @@ p3 = pn.Row(
                     scalebar_range="x",
                     scalebar_location="top_left",
                     scalebar_unit=("bp"),
+                 show_grid=True,
                 )
             )
         ),
     )
 )
 
-pn.Column(p12, p3)
+pn.Column(p12, p3).servable(title=inFile)
