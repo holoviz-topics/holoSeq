@@ -20,20 +20,11 @@ A draft framework [specification is here.](https://github.com/fubar2/holoSeq/blo
 Requires both Python and the python-venv module installed. 
 These steps ensure that the virtual environment directory can be made and deleted without any other changes to your system.
 
-Clone the repository:
+1. Clone this repository in a convenient and disposable directory:
 
 `git clone https://github.com/fubar2/holoSeq`
 
-CD to the cloned directory, and prepare the python virtual environment needed, then run the panel application using something like the commands below. 
-
-
-1. Clone
-
-`git clone https://github.com/fubar2/holoSeq`
-
-Change directory to that new clone.
-
-2. Prepare the python virtual environment needed
+2. Change directory to that new holoSeq subdirectory, prepare the python virtual environment needed, and start the demonstration
 
 ```
 cd holoSeq
@@ -44,7 +35,7 @@ panel serve holoseq_display.py --show --args --inFile mUroPar1.paf_cis1.hseq.gz 
 
 ```
 
-Expect to see a web browser window pop open and the plot should soon appear and be ready for interactive viewing:
+Expect to see output shown below, and a web browser window should pop open. Takes 10-20 seconds to read the 3.4M pairs and to show the interactive visualisation:
 
 ```
 (venv) ross@pn50:~/rossgit/holoSeq$ panel serve holoseq_display.py --args --inFile mUroPar1_cis1.hseq.gz --size 1000
@@ -56,8 +47,8 @@ Expect to see a web browser window pop open and the plot should soon appear and 
 
 - `--show` option opens a browser window and immediately starts processing the script.
 - `--size` option determines both x and y plot window size.
+- `--inFile` must be the path of a prepared hseq compressed coordinate data file, such as the supplied demonstration HiC heatmap.
 - Delay will vary with processing power and the number of coordinates
-- Typically, it will take 10-20 seconds to read the 3.4M pairs and to show the interactive visualisation.
 
 When the plot appears, the view is controlled by the usual Bokeh tools in the toolbar on the left of the plot.
 
