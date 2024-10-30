@@ -1,13 +1,16 @@
 # holoSeq: Interactive viewing of genomic annotation
 
 ### Manage millions of features in a laptop browser window
+
 *Designed for Galaxy interactive tools. Works on a laptop. Built on the [Holoviews](https://holoviews.org/) and IPython notebook ecosystem.*
 
 <img src="https://github.com/fubar2/hv-notebooks/blob/main/h2.gif" alt="zoom demo" width="125"/>       <img src="https://github.com/fubar2/hv-notebooks/blob/main/h1.gif" alt="zoom demo" width="125"/>
 
 ## Project status
 
-This is new work in progress. Help wanted. PR and suggestions welcomed.
+*Help wanted. PR and suggestions welcomed.*
+
+This is new work in progress. 
 
 Development started in late October 2024. 
 A draft framework [specification is here.](https://github.com/fubar2/holoSeq/blob/main/HoloSeqOverview.md). 
@@ -22,6 +25,15 @@ Clone the repository:
 `git clone https://github.com/fubar2/holoSeq`
 
 CD to the cloned directory, and prepare the python virtual environment needed, then run the panel application using something like the commands below. 
+
+
+1. Clone
+
+`git clone https://github.com/fubar2/holoSeq`
+
+Change directory to that new clone.
+
+2. Prepare the python virtual environment needed
 
 ```
 cd holoSeq
@@ -63,8 +75,8 @@ Interactive HTML can be exported, but without a datashader provider, zoomed deta
 
 ## holoSeq data format disk sizes
 
-Data size on disk using the format in the specification gives more than an order of magnitude, from about 300MB
-of input PAF to 23MB of hseq format data.
+Data size on disk using the hseq format provides more than an order of magnitude shrinkage, from about 300MB
+of input PAF to 23MB of hseq coordinate format data.
 
 The original PAF is 1.2GB and contains about 14M rows. About 3.6M pairs of points had both contigs on the mUroPar1 paternal haplotype - so about
 1/4 of all rows. The sample used in the demonstration is a 23M gzip containing all the information needed to plot 
@@ -72,9 +84,9 @@ these 3.6M pairs.
 
 ## Prepare a PAF file containing the points to be plotted
 
-The demonstration compressed holoSeq plot information was prepared with a PAF file prepared in a Galaxy VGP workflow, mapping the arima HiC reads
-against the assembled haplotypes, running Bellerophon to remove chimeric Arima reads into a bam of pairs. These are converted to a sam file with header
-using samtools view, and processed into a PAF with an AWK script
+The demonstration holoSeq plot hseq format coordinate data was prepared from a PAF file. That was output from a Galaxy VGP workflow, mapping the arima HiC reads
+against the assembled haplotypes, running Bellerophon to remove chimeric Arima reads and merging into a bam containing all HiC pairs. 
+These were converted to a sam file with header using `samtools view`, then processed into a PAF using this AWK script:
 
 ```
 #!/bin/awk -f
@@ -100,9 +112,9 @@ else
 }
 
 ```
-A conversion utility is provided for PAF inputs, that works with the awk output. 
 
-The compressed demonstration plotting data were prepared using:
+This repository includes a python script conversion utility for PAF inputs, `holoSeq_prepare_paf.py`, that works with the awk PAF output and converts it into
+a compressed coordinate file. The compressed demonstration plotting data were prepared using:
 
 `python holoSeq_prepare_paf.py --inFile mUroPar1.paf --title "VGP Arctic Ground Squirrel arima HiC contact matrix, paternal haplotype" `
 
@@ -113,11 +125,11 @@ for Mashmap paf inputs, use:
 This step produces outputs containing subsets of contact point pairs. Only one `mUroPar1.paf_cis1.hseq.gz` is currently created.
 This is a WIP.
 
-These can be viewed like the supplied local demonstration example using panel.
+These can be viewed like the supplied local demonstration example using panel as described above
 
 ## 1. Application: hapsHiCpafHoloview.ipynb is a plotter for paired HiC contact pointss.ss, input as a PAF.
 
-This is from the Arctic Ground Squirrel mUroPar1 HiC VGP data. It shows the three images and about 14 million points.
+This uses HiC data from the [Arctic Ground Squirrel mUroPar1](). It shows the three images and about 14 million points.
 
 <img src="https://github.com/user-attachments/assets/e288f295-84b0-4121-9099-db5007445a27" alt="h1-h1, h2-h2 pairs" width="800"/>
 

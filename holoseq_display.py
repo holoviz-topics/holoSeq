@@ -255,6 +255,7 @@ else:
 # pafxycis1 = pd.DataFrame(np.vstack([xcis1r,ycis1r]).T, columns = ['x', 'y'])
 # bisect.bisect_left(a, x, lo=0, hi=len(a), *, key=None)
 # prepare and show the 3 plots
+
 p1 = pn.Column(
     showloc,
     pn.pane.HoloViews(
@@ -277,6 +278,7 @@ p1 = pn.Column(
                 scalebar_range="x",
                 scalebar_location="top_left",
                 scalebar_unit=("bp"),
+                show_grid=True,
             )
         )
     ),

@@ -1,3 +1,5 @@
+# for Mashmap paf, python holoSeq_prepare_paf.py --inFile  hg002_2k99.paf --title "hg002 Mashmap" --hap_indicator None --contig_sort length
+# works ok!
 # Proof of cocept data are Arima HiC reads from the Arctic Ground Squirrel mUroPar1 VGP genomeArk repository
 # processed with Dephine's Pretext workflow using Bellerophon to remove chimeric reads
 # The paired bam output is converted to PAF with an awk script (!) and that's what is read
@@ -44,46 +46,75 @@ def rotatecoords(x, y, radians=0.7853981633974483, origin=(0, 0)):
 def getHap(contig):
     """
     function to return suffix H1 from chrH1 - adjust to suit.
+     help="None, Suffix (H[1,2]) Dashsuffix (_H...)"
     """
-    return contig[-2:]
+    hi = args.hap_indicator
+    if hi == "None":
+        return('H1')
+    elif hi == "Suffix":
+        return contig[-2:]
+    elif hi == "Dashsuffix":
+        return contig.split('_')[-1]
 
 
-def sorthapqname(s1, s2):
+def VGPsortfunc(s1, s2):
     """
     fugly hack to sort super contigs before anything else
     then by contig number or if they are the same offset
     ('SUPER_2H1', 226668729) , ('SUPER_1H1', 284260672), ('SUPER13_unloc_5H1',..), (Scaffold_1116H2, ...)
+    or chr10_H1 etc
     """
     if s1[0] == s2[0]:  # simplest case - same contig, sort on offset
         return s1[1] - s2[1]  # neg if left sorts before
-    s11, s12 = s1[0].split("_", 1)
-    s1n = s12.split("_")[-1][:-2]
-    s1_super = (s11.upper() == "SUPER") or (s11.upper().startswith("CHR"))
-    s21, s22 = s2[0].split("_", 1)
-    s2n = s22.split("_")[-1][:-2]
-    s2_super = (s21.upper() == "SUPER") or (s21.upper().startswith("CHR"))
-    if s1n.isdigit():
-        s1nn = int(s1n)
-    else:
-        s1nn = ord(s1n[0]) * 1000
-    if s2n.isdigit():
-        s2nn = int(s2n)
-    else:
-        s2nn = ord(s2n[0]) * 1000
-    if s1_super == s2_super:
-        nunder1 = len(s1[0].split("_"))
-        nunder2 = len(s2[0].split("_"))  # _unloc or whatever
-        if nunder1 == nunder2:
-            return s1nn - s2nn
+    sorts = [{},{}]
+    for i, (contig, length) in enumerate([s1,s2]):
+        if '_' in contig:
+            conta, contb = [x.upper() for x in contig.split("_", 1)]
         else:
-            return nunder1 - nunder2
-    elif s1_super:
+            conta = contig.upper()
+            contb = ''
+        if conta.startswith('CHR'):
+            contign = conta.replace("CHR","").replace("_","")
+        elif conta.startswith('SUPER') or conta.startswith('SCAFFOLD') and contb > '':
+            if "UNLOC" in contig.upper():
+                unloc = True
+                contign = conta.split("_")[0]
+            else:
+                unloc = False
+                contign = contb
+        else:
+            contign = contb.split("_")[-1][:-2]
+        if unloc:
+            contign = contb.split("_")[0]
+        if contign.isdigit():
+            nval = int(contign)
+        else:            
+            nval = ord(contign[0])
+        is_super = not unloc and (conta in ["SUPER", "CHR", 'SCAFFOLD'])
+        sorts[i]['is_super'] = is_super
+        sorts[i]['n'] = nval
+        sorts[i]['conta'] = conta
+    if sorts[0]['conta'] == sorts[1]['conta']:
+        return sorts[0]['n']  - sorts[1]['n']
+    elif sorts[0]['conta'] in ['SUPER', 'CHR']:
         return -1
-    elif s2_super:
+    elif sorts[1]['conta'] in ['SUPER', 'CHR']:
         return 1
     else:
-        return s1nn - s2nn
+        nunder1 = len(sorts[0]['conta'].split("_"))
+        nunder2 = len(sorts[1]['conta'].split("_"))  # _unloc or whatever
+        if nunder1 == nunder2:
+            return sorts[0]['n']  - sorts[1]['n'] 
+        else:
+            return nunder1 - nunder2
+    
 
+
+def Lengthsortfunc(s1, s2):
+    """
+   
+    """
+    return s1[1] - s2[1]  # neg if left sorts before
 
 def export_mapping(hsId, outFileName, haps, hnames, hlens, x, y, anno, title):
     """
@@ -101,8 +132,6 @@ def export_mapping(hsId, outFileName, haps, hnames, hlens, x, y, anno, title):
 
     hdr = prepHeader(haps, hnames, hlens, hsId, title)
 
-    print('haps =', haps)
-    print('header=', hdr)
     with gzip.open(outFileName, mode='wb') as ofn:
         ofn.write(str.encode('\n'.join(hdr) + '\n'))
         if len(anno) == len(x):
@@ -117,6 +146,8 @@ def export_mapping(hsId, outFileName, haps, hnames, hlens, x, y, anno, title):
 parser = argparse.ArgumentParser(description="", epilog="")
 parser.add_argument("--inFile", help="PAF with paired alignments", default="mUroPar1.paf")
 parser.add_argument("--title", help="Title for the plot", default="Plot title goes here")
+parser.add_argument("--contig_sort", help="VGPname, name, length", default="VGPname")
+parser.add_argument("--hap_indicator", help="None, Suffix (H[1,2]) Dashsuffix (_H...)", default="None")
 parser.add_argument("--version", "-V", action="version", version='0.1')
 args = parser.parse_args()
 inFile = args.inFile
@@ -150,8 +181,11 @@ with open(inFile, "r") as f:
             hqsorts[hap].append((c2, int(row[6])))
 for hap in haps:
     cum = 1
+    if args.contig_sort == "VGPname":
+        hqsorts[hap].sort(key=cmp_to_key(VGPsortfunc))
+    elif args.contig_sort == "name":
+        hqsorts[hap].sort()
     hlsorts[hap].sort(reverse=True)
-    hqsorts[hap].sort(key=cmp_to_key(sorthapqname))
     hlstarts[hap] = OrderedDict()
     hqstarts[hap] = OrderedDict()
     for clen, contig in hlsorts[hap]:
@@ -161,12 +195,20 @@ for hap in haps:
     for contig, clen in hqsorts[hap]:
         hqstarts[hap][contig] = cum
         cum += clen
-print('hqstarts=',hqstarts)
-h1starts = [hqstarts[haps[0]][x] for x in hqstarts[haps[0]].keys()]
-h1names = list(hqstarts[haps[0]].keys())
+if args.contig_sort == "length":
+    starts = hlstarts
+else:
+    starts = hqstarts
+h1starts = [starts[haps[0]][x] for x in starts[haps[0]].keys()]
+h1names = list(starts[haps[0]].keys())
+print('h1names=',h1names[:30])
 if len(haps) > 1:
-    h2starts = [hqstarts[haps[1]][x] for x in hqstarts[haps[1]].keys()]
-    h2names = list(hqstarts[haps[1]].keys())
+    if args.contig_sort == "length":
+        starts = hlstarts
+    else:
+        starts = hqstarts
+    h2starts = [starts[haps[1]][x] for x in starts[haps[1]].keys()]
+    h2names = list(starts[haps[1]].keys())
 # have the axes set up so prepare the three plot x/y vectors
 # for a second pass to calculate all the coordinates.
 # adding tooltips just does not scale so abando - see the tooltip old version
