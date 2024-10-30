@@ -24,7 +24,8 @@ Prepare the python virtual environment needed, then run the panel application us
 python -m venv venv
 . venv/bin/activate
 pip install -r requirements.txt 
-panel serve holoseq_display.py --args --inFile mUroPar1_cis1.hseq.gz --size 1000
+panel serve holoseq_display.py --args --inFile mUroPar1.paf_cis1.hseq.gz --size 1000
+
 ```
 
 Expect to see:
