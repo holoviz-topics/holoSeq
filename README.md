@@ -1,34 +1,38 @@
 # holoSeq: Interactive viewing of genomic annotation
 
-#### Manage millions of features in a laptop browser window
+### Manage millions of features in a laptop browser window
 *Designed for Galaxy interactive tools. Works on a laptop. Built on the [Holoviews](https://holoviews.org/) and IPython notebook ecosystem.*
 
 <img src="https://github.com/fubar2/hv-notebooks/blob/main/h2.gif" alt="zoom demo" width="125"/>       <img src="https://github.com/fubar2/hv-notebooks/blob/main/h1.gif" alt="zoom demo" width="125"/>
 
-#### Project status
+## Project status
 
 This is new work in progress. Help wanted. PR and suggestions welcomed.
 
 Development started in late October 2024. 
 A draft framework [specification is here.](https://github.com/fubar2/holoSeq/blob/main/HoloSeqOverview.md). 
 
-#### Quick start - clone this repository and run the demonstration
+## Quick start demonstration
 
-Assumes you have python and the python-venv module installed. This process ensures
-that the virtual environment directory can be made and deleted without any other changes to your system.
+Requires both Python and the python-venv module installed. 
+These steps ensure that the virtual environment directory can be made and deleted without any other changes to your system.
 
-CD to the cloned directory. 
-Prepare the python virtual environment needed, then run the panel application using something like the commands below. 
+Clone the repository:
+
+`git clone https://github.com/fubar2/holoSeq`
+
+CD to the cloned directory, and prepare the python virtual environment needed, then run the panel application using something like the commands below. 
 
 ```
+cd holoSeq
 python -m venv venv
 . venv/bin/activate
 pip install -r requirements.txt 
-panel serve holoseq_display.py --args --inFile mUroPar1.paf_cis1.hseq.gz --size 1000
+panel serve holoseq_display.py --show --args --inFile mUroPar1.paf_cis1.hseq.gz --size 1000
 
 ```
 
-Expect to see:
+Expect to see a web browser window pop open and the plot should soon appear and be ready for interactive viewing:
 
 ```
 (venv) ross@pn50:~/rossgit/holoSeq$ panel serve holoseq_display.py --args --inFile mUroPar1_cis1.hseq.gz --size 1000
@@ -37,7 +41,11 @@ Expect to see:
 2024-10-29 17:06:33,649 Bokeh app running at: http://localhost:5006/holoseq_display
 2024-10-29 17:06:33,649 Starting Bokeh server with process id: 388673
 ```
-No processing will take place until a browser window is opened at the address shown, and it will take 10-20 seconds to read the 3.4M pairs and to show the interactive visualisation.
+
+- `--show` option opens a browser window and immediately starts processing the script.
+- `--size` option determines both x and y plot window size.
+- Delay will vary with processing power and the number of coordinates
+- Typically, it will take 10-20 seconds to read the 3.4M pairs and to show the interactive visualisation.
 
 When the plot appears, the view is controlled by the usual Bokeh tools in the toolbar on the left of the plot.
 
@@ -53,7 +61,7 @@ available and was used to generate the demonstration. Other common genomic annot
 Scaling and zooming rely on datashader running on a Holoviews or Bokeh server. Static images can be captured. 
 Interactive HTML can be exported, but without a datashader provider, zoomed detail is limited. 
 
-#### holoSeq data format disk sizes
+## holoSeq data format disk sizes
 
 Data size on disk using the format in the specification gives more than an order of magnitude, from about 300MB
 of input PAF to 23MB of hseq format data.
@@ -62,7 +70,7 @@ The original PAF is 1.2GB and contains about 14M rows. About 3.6M pairs of point
 1/4 of all rows. The sample used in the demonstration is a 23M gzip containing all the information needed to plot 
 these 3.6M pairs.
 
-#### Prepare a PAF file containing the points to be plotted
+## Prepare a PAF file containing the points to be plotted
 
 The demonstration compressed holoSeq plot information was prepared with a PAF file prepared in a Galaxy VGP workflow, mapping the arima HiC reads
 against the assembled haplotypes, running Bellerophon to remove chimeric Arima reads into a bam of pairs. These are converted to a sam file with header
@@ -98,14 +106,16 @@ The compressed demonstration plotting data were prepared using:
 
 `python holoSeq_prepare_paf.py --inFile mUroPar1.paf --title "VGP Arctic Ground Squirrel arima HiC contact matrix, paternal haplotype" `
 
-for Mashmap paf, `python holoSeq_prepare_paf.py --inFile  hg002_2k99.paf --title "hg002 Mashmap" --hap_indicator None --contig_sort length`
+for Mashmap paf inputs, use: 
+
+`python holoSeq_prepare_paf.py --inFile  hg002_2k99.paf --title "hg002 Mashmap" --hap_indicator None --contig_sort length`
 
 This step produces outputs containing subsets of contact point pairs. Only one `mUroPar1.paf_cis1.hseq.gz` is currently created.
 This is a WIP.
 
 These can be viewed like the supplied local demonstration example using panel.
 
-### 1. hapsHiCpafHoloview.ipynb is a plotter for paired HiC contact pointss.ss, input as a PAF.
+## 1. Application: hapsHiCpafHoloview.ipynb is a plotter for paired HiC contact pointss.ss, input as a PAF.
 
 This is from the Arctic Ground Squirrel mUroPar1 HiC VGP data. It shows the three images and about 14 million points.
 
@@ -127,7 +137,7 @@ grouping by common reference sequence in the header and vertical stack layout.
 Contigs and sizes have to be inferred from the data so it's 2 passes. The actual holoviews/panel code is ~20 lines once the data are in a grid. 
 Holoviews is dynamite.
 
-#### Gallery of screenshots
+### Gallery of screenshots
 
 The images are highly interactive in a Jupyter notebook but these static screenshots give some idea of what they can do.
 
