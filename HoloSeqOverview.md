@@ -19,25 +19,30 @@ Bigwig, bed and GFF are the major formats for 1D annotation tracks.
 
 ### Coordinate system
 
+Genomic reference data forms the backbone for any annotation browser.
+It is generally broken up into multiple named "contigs" or chromosomes, when in the usual fasta format.
+An assembled haplotype may have thousands of contigs that have not yet been merged into chromosomes.
+
 For an interactive genome browser, tracks typically run horizontally, from the start of the reference sequence on the left to the last nucleotide of the last contig.
 
-Holoviews dynamic maps require ordinal axis coordinates. A typical assembly haplotype or reference sequence consists of
-an arbitrary number of chromosomes, or more generally `contigs`, each of a fixed length. Contigs must be ordered on the axes, usually by name or by length,
-so they can be placed in a row, with tick marks and labels.
+Holoviews dynamic maps require ordinal axis coordinates. Contigs must be ordered on the axes, usually by name or by length,
+so they can be mapped as axes, with tick marks and labels.
 
-The features annotating any track must have a position in the reference sequence used to create the axis. 
-It is usually described by the name of the contig, and the number of bases from the start of the contig to the start of the feature. 
-Some features have a length while others for 2D grids are points.
+Features must have a position to locate them in the reference sequence used to create the axis. 
+Position is usually described by the name of the contig, and the number of bases from the start of the contig to the start of the feature. 
+Some features have a length while others for 2D grids are points. Many features may have optional annotation.
 
-To convert feature positions into plot axis coordinates, contig lengths are cumulated in the order given, to give the ordinal axis value for the first base
-of each ordered contig. When a feature is mapped, the appropriate contig cumulated start is added to the feature offset, to give the 
-ordinal start coordinate on that axis.
+To convert feature positions into plot axis coordinates, contig lengths are cumulated in the order given, and a zero is inserted,
+to give the ordinal position on the axis, for the first base of each ordered contig. 
 
-In addition to either one or two coordinates, features may have additional annotation values, optionally displayed as tooltips.
+When a feature is mapped, the appropriate contig's cumulated start is added to the feature offset, to give the 
+ordinal start coordinate on that axis for the start of the feature.
+
+Additional annotation values may be optionally displayed as hover tooltips.
 
 ## Input format for 1D and 2D features on pre-mapped axis coordinates
 
-The converters will produce gzip compressed text files. The data must start with a header section,where every row starts with `@`.
+The converters will produce gzip compressed text files. The data must start with a header section, where every row begins with `@`.
 
 The first row of the must be either `@v1HoloSeq1D [chart type | bar]` or `@v1HoloSeq2D`, or the data will not be processed.
 
@@ -47,17 +52,18 @@ emphasised
 2D data will be presented as an autoscaling density heatmap. The header and data might only have 1 axis name, for example where HiC pairs from one haplotype are plotted
 with that sequence on both axes, or 2 axis names, if HiC pairs involving both haplotypes, one on each axis, are being plotted.
 
-The subsequent header rows must have the axis names, contig names and their lengths, delimited by whitespace, and starting with `@` such as
+The subsequent header rows must have the plot title, plot type, axis names, contig names and their cumulated lengths, delimited by whitespace, and starting with `@` such as
 
 ```
-@H1 chr1 2000
-@H2 chr1 2500
-@H1 chr2 1000
-@H2 chr2 1500
+@v1HoloSeq1D bar
+@title a very small bar plot
+@H1 chr1 0
+@H1 chr2 2500
+@H1 chr3 7000
+@H1 chr4 9500
 ```
 
-In this case, H1 will show chr1 and chr2 tick marks on the 3000 base horizontal axis, while H2 coordinates will be placed on the 4000 base vertical axis
-with chr1 and chr2 tick marks.
+In this case, H1 will show four chromosomes starting at each of the positions shown.
 
 Data rows for 1D data must have the x ordinal axis coordinate, a feature length, and an annotation value to show for that length, such as:
 `2455453443 128 99.8`
@@ -87,8 +93,11 @@ Tap coordinates are calculated from a stream giving the tap x and y coordinates,
 
 ## Deployment
 
-The visualisation can be run locally and viewed in a desktop browser using 
+A visualisation can be run locally and viewed in a desktop browser by stacking any number of compressed coordinate hseq 
+files 
 
-`panel serve [notebookname].ipynb --args --foo 23 --bar ./my_hseq.gz`
+`panel serve holoseq_display.py --args --inFile foo.gz bar.gz baz.gz zot.gz --title my holoseq plot`
+
+An interactive tool for Galaxy will be created.
 
 

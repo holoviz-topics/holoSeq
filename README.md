@@ -64,6 +64,11 @@ available and was used to generate the demonstration. Other common genomic annot
 Scaling and zooming rely on datashader running on a Holoviews or Bokeh server. Static images can be captured. 
 Interactive HTML can be exported, but without a datashader provider, zoomed detail is limited. 
 
+Mutliple input files will produce a stack of plots that work independently:
+
+` panel serve holoseq_display.py --show --args --inFile mUroPar1.paf_cis1.hseq.gz small.paf_cis1.hseq.gz  --size 1000'
+
+
 ## holoSeq data format disk sizes
 
 Data size on disk using the hseq format provides more than an order of magnitude shrinkage, from about 300MB
