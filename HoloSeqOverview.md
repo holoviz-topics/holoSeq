@@ -1,15 +1,21 @@
 # HoloSeq
 
-This document describes a data format, containing pre-gridded sequence annotation, that allows large scale data to be viewed
+This document describes a precomputed mapping data format for sequence annotation. It allows large scale data to be viewed
 as 1D charts or 2D heatmaps using a generic visualisation infrastructure built using the [Holoviews ecosystem](https://holoviews.org/).
 
-The presentation layer is designed for large scale data associated with a genomic reference or other sequence. It can pan and zoom smoothly from whole genomes down to 
-individual points with tens of millions of rows of data, in a web browser running on a suitable laptop or in Galaxy. The data format
-provides all the information needed for accurate plotting, on the inbuilt reference sequence coordinates, in a very sparse form. 
+The presentation layer supports genome scale feature data associated with a genomic reference or other sequence. The user can pan and zoom 
+smoothly from whole genomes down to individual points, with tens of millions of rows of data, in a web browser running on a suitable laptop or in Galaxy. 
+The data format provides all the information needed for recreating a plot using the inbuilt reference sequence coordinates as axes.
 
-The design isolates the complexities of displaying many different kinds of annotation at genomic scale, from the messy challenges of converting the 
-zoo of external data in important standard formats. The intention is to allow any number of input files to be supplied to the generic IPython notebook, where
-they are automatically organised and displayed. 
+The design isolates the complexities of displaying many different kinds of annotation at genomic scale, from the messy challenges of converting
+complex existing data in standard formats. The intention is to allow any number of precomputed track coordinage files to be supplied to the generic display 
+application, where they are automatically organised and displayed, using hints on layout supplied on the command line. 
+
+The main use case envisioned is a central repository of pre-computed plots to make annotation of the VGP genomic data easily accessible.
+Precomputed plot tracks can be reused indefinitely, mixed and matched by the user to suit their needs.
+
+Each species has different coordinate systems so cannot share a reference sequence axis, but can each be displayed in
+tracks with separate reference sequences side by side or stacked.
 
 ### Potential sources of annotation for display
 
@@ -20,8 +26,9 @@ Bigwig, bed and GFF are the major formats for 1D annotation tracks.
 ### Coordinate system
 
 Genomic reference data forms the backbone for any annotation browser.
-It is generally broken up into multiple named "contigs" or chromosomes, when in the usual fasta format.
-An assembled haplotype may have thousands of contigs that have not yet been merged into chromosomes.
+New genomes are assembled into multiple "contigs", that are refined into chromosomes in reference genomes.
+Genomes are typically handled in fasta format. A newly assembled haplotype may have thousands of contigs
+that have not yet been merged into chromosomes.
 
 For an interactive genome browser, tracks typically run horizontally, from the start of the reference sequence on the left to the last nucleotide of the last contig.
 
@@ -42,9 +49,11 @@ Additional annotation values may be optionally displayed as hover tooltips.
 
 ## Input format for 1D and 2D features on pre-mapped axis coordinates
 
-The converters will produce gzip compressed text files. The data must start with a header section, where every row begins with `@`.
+The converters produce gzip compressed text files. 
 
-The first row of the must be either `@v1HoloSeq1D [chart type | bar]` or `@v1HoloSeq2D`, or the data will not be processed.
+The text file must start with a header section, where every row begins with `@`.
+
+The first row of the must be either `@v1HoloSeq1D [bar|scatter|line]` or `@v1HoloSeq2D`, or the data will not be processed.
 
 For 1D data, the chart type may be one of `bar`, `scatter` or `line`. Default is `bar`. Regions with 4 or more SD above or below the global mean are 
 emphasised
