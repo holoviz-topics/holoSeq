@@ -1,7 +1,7 @@
 # holoSeq: Interactive viewing of genomic annotation
 
-### Manage millions of features in a laptop browser window
-
+### Interactively browse millions of features in a laptop browser window 
+*Browse 1D charts and 2D heatmap plots, that scale themselves when zoomed from the entire genome down to individual points and back* 
 *Designed for Galaxy interactive tools. Works on a laptop. Built on the [Holoviews](https://holoviews.org/) and IPython notebook ecosystem.*
 
 <img src="https://github.com/fubar2/hv-notebooks/blob/main/h2.gif" alt="zoom demo" width="125"/>       <img src="https://github.com/fubar2/hv-notebooks/blob/main/h1.gif" alt="zoom demo" width="125"/>
@@ -64,9 +64,9 @@ available and was used to generate the demonstration. Other common genomic annot
 Scaling and zooming rely on datashader running on a Holoviews or Bokeh server. Static images can be captured. 
 Interactive HTML can be exported, but without a datashader provider, zoomed detail is limited. 
 
-Mutliple input files will produce a stack of plots that work independently:
+Multiple input files will produce a stack of plots that work independently:
 
-` panel serve holoseq_display.py --show --args --inFile mUroPar1.paf_cis1.hseq.gz small.paf_cis1.hseq.gz  --size 1000'
+`panel serve holoseq_display.py --show --args --inFile mUroPar1.paf_cis1.hseq.gz small.paf_cis1.hseq.gz  --size 1000`
 
 
 ## holoSeq data format disk sizes
@@ -118,32 +118,9 @@ for Mashmap paf inputs, use:
 
 `python holoSeq_prepare_paf.py --inFile  hg002_2k99.paf --title "hg002 Mashmap" --hap_indicator None --contig_sort length`
 
-This step produces outputs containing subsets of contact point pairs. Only one `mUroPar1.paf_cis1.hseq.gz` is currently created.
-This is a WIP.
+This step produces outputs containing subsets of contact point pairs.
 
-These can be viewed like the supplied local demonstration example using panel as described above
-
-## 1. Application: hapsHiCpafHoloview.ipynb is a plotter for paired HiC contact pointss.ss, input as a PAF.
-
-This uses HiC data from the [Arctic Ground Squirrel mUroPar1](). It shows the three images and about 14 million points.
-
-<img src="https://github.com/user-attachments/assets/e288f295-84b0-4121-9099-db5007445a27" alt="h1-h1, h2-h2 pairs" width="800"/>
-
-
-The matrix is symmetrical so only one half is needed but it is visually more impressive as shown
-
-The notebook makes 3 interactive plots showing H1/H1, H2/H2 "cis" pairs, and H1/H2 "trans" pairs. 
-These work well with 14 million points. Occasional pauses before rescaling and refresh, but can pan and wheel zoom down from all ponts to single pairs easily. 
-
-Click anywhere to see the coordinates or drag, and use the mouse wheel to zoom. When run locally with 4.2.5, it is astounding. 14 million points. The old version does not do datashader properly so goes all blocky as you zoom.
-
-There's ~250 lines of code to make the axes - must be ordinal for datashader to work so have to map the contigs end to end before can assign x/y grid coordinates to the pairs read from the paf input file.
-
-That code already contains a PAF converter, and the generic IPython notebook visualiser will be built using the existing visualisation components, adding 1D converters and tracks, with 
-grouping by common reference sequence in the header and vertical stack layout.
-
-Contigs and sizes have to be inferred from the data so it's 2 passes. The actual holoviews/panel code is ~20 lines once the data are in a grid. 
-Holoviews is dynamite.
+These can be viewed like the supplied local demonstration example using `panel` as described above
 
 ### Gallery of screenshots
 
@@ -190,5 +167,30 @@ Below are the points in H1 and H2 in the same region of the trans plot where I n
 break in the main diagonal as an example of what's possible in the notebook.
 
 <img src="https://github.com/user-attachments/assets/20252a6d-2058-484d-a70d-413cc22cd706" alt="h1-h2 pairs" width="500"/>
+
+### Historical material 
+
+#### Original proof of concept application: hapsHiCpafHoloview.ipynb is a plotter for paired HiC contact pointss.ss, input as a PAF.
+
+This uses HiC data from the [Arctic Ground Squirrel mUroPar1](). It shows the three images and about 14 million points.
+
+<img src="https://github.com/user-attachments/assets/e288f295-84b0-4121-9099-db5007445a27" alt="h1-h1, h2-h2 pairs" width="800"/>
+
+
+The matrix is symmetrical so only one half is needed but it is visually more impressive as shown
+
+The notebook makes 3 interactive plots showing H1/H1, H2/H2 "cis" pairs, and H1/H2 "trans" pairs. 
+These work well with 14 million points. Occasional pauses before rescaling and refresh, but can pan and wheel zoom down from all ponts to single pairs easily. 
+
+Click anywhere to see the coordinates or drag, and use the mouse wheel to zoom. When run locally with 4.2.5, it is astounding. 14 million points. The old version does not do datashader properly so goes all blocky as you zoom.
+
+There's ~250 lines of code to make the axes - must be ordinal for datashader to work so have to map the contigs end to end before can assign x/y grid coordinates to the pairs read from the paf input file.
+
+That code already contains a PAF converter, and the generic IPython notebook visualiser will be built using the existing visualisation components, adding 1D converters and tracks, with 
+grouping by common reference sequence in the header and vertical stack layout.
+
+Contigs and sizes have to be inferred from the data so it's 2 passes. The actual holoviews/panel code is ~20 lines once the data are in a grid. 
+Holoviews is dynamite.
+
 
    
