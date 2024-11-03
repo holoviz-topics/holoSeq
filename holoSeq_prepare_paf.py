@@ -186,7 +186,7 @@ class pafConvert:
     paf to xy and axis metadata
     """
 
-    def __init__(self, inFname, outFname, args):
+    def __init__(self, inFname, args):
         self.inFname = inFname
         hlstarts = {}
         hqstarts = {}
@@ -292,7 +292,7 @@ class pafConvert:
         print('ncis1=',len(cis1["x"]))
         if (len(cis1["x"])) > 0:
             hap = haps[0]
-            ofn = "%s_cis%s_hseq.gz" % (hap, outFname)
+            ofn = "%s_cis%s_hseq.gz" % (hap, inFname)
             self.export_mapping(
                 holoSeqHeaders[1],
                 ofn,
@@ -305,7 +305,7 @@ class pafConvert:
                 args,
             )
         if (len(cis2["x"])) > 0:
-            ofn = "%s_cis%s_hseq.gz" % (hap, outFname)
+            ofn = "%s_cis%s_hseq.gz" % (hap, inFname)
             hap = haps[1]
             self.export_mapping(
                 holoSeqHeaders[1],
@@ -319,7 +319,7 @@ class pafConvert:
                 args,
             )
         if (len(trans1["x"])) > 0:
-            ofn = "%s_trans_hseq.gz" % (outFname)
+            ofn = "%s_trans_hseq.gz" % (inFname)
             self.export_mapping(
                 holoSeqHeaders[1],
                 ofn,
@@ -342,16 +342,10 @@ class pafConvert:
             """
             holoSeq output format
             """
-            h = [
-                "@%s %s %d" % (haps[i], hnames[i], hstarts[i])
-                for i in range(len(hstarts))
-            ]
-            h.insert(0, "@title %s" % args.title)
-            h.insert(0, "@datasource %s" % "paf")
-            h.insert(0, "@datafile %s" % self.inFname)
-            h.insert(0, "@refuri %s" % args.refURI)
-            h.insert(0, hsId)
-            return h
+            h = ["@%s %s %d" % (haps[i], hnames[i], hstarts[i]) for i in range(len(hnames))]
+            metah = [hsId, "@@title %s" % args.title, "@@datasource %s" % "bigwig", "@@datafile %s" % self.inFname, "@@refURI %s" % args.refURI]
+            
+            return metah + h
 
         hdr = prepHeader(haps, hnames, hstarts, hsId, args)
 
@@ -390,8 +384,7 @@ for f in args.inFile:
     print("inFile=", f, ps)
 
     if ps == ".paf":
-        outf = "%s_cis1.hseq.gz" % f
-        p = pafConvert(f, outf, args)
+        p = pafConvert(f, args)
     elif ps in [".bw", ".bigwig"]:
         outf = "%s_bw.hseq.gz" % f
         p = bwConvert(f, outf, args)
