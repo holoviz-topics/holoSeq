@@ -29,6 +29,8 @@ import os
 
 import pybigtools
 
+from holoseq_gff import parseGFF
+
 # inFile = "galaxy_inputs/paf/bothmap.paf.tab.tabular"
 inFile = "/home/ross/rossgit/holoviews-examples/huge.paf"
 
@@ -117,6 +119,16 @@ def Lengthsortfunc(s1, s2):
     """ """
     return s1[1] - s2[1]  # neg if left sorts before
 
+
+class gffConvert:
+    """
+        gff = {"start": [], "end": [], "strand": [], "type": [], "qualifiers": []}
+    """
+    def __init__(self, gff):
+        dgff = parseGFF(gff)
+        ftypes = np.unique(gff['type'])
+        df = pd.DataFrame.from_dict(dgff)
+    
 
 class bwConvert:
     """
