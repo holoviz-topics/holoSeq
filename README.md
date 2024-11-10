@@ -1,7 +1,7 @@
 # holoSeq: Interactive viewing of genomic annotation
 
 ### Interactively browse millions of features in a laptop browser window 
-*Browse 1D charts and 2D heatmap plots, that scale themselves when zoomed from the entire genome down to individual points and back* 
+*Browse 1D charts and 2D heatmap plots, that scale themselves when zoomed from the entire genome down to individual points and back.* 
 *Designed for Galaxy interactive tools. Works on a laptop. Built on the [Holoviews](https://holoviews.org/) and IPython notebook ecosystem.*
 
 <img src="https://github.com/fubar2/hv-notebooks/blob/main/h2.gif" alt="zoom demo" width="125"/>       <img src="https://github.com/fubar2/hv-notebooks/blob/main/h1.gif" alt="zoom demo" width="125"/>
