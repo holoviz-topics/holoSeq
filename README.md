@@ -57,7 +57,7 @@ When the plot appears, the view is controlled by the usual Bokeh tools in the to
 - Pan by grabbing with the left mouse button.
 - Only pairs involving H1 contigs (H1 cis) are used in the demonstration.
 
-Briefly, the framework uses the [minimum data required](https://github.com/fubar2/holoSeq/blob/main/HoloSeqOverview.md) to create a plot.
+Briefly, the framework creates the [minimum data required](https://github.com/fubar2/holoSeq/blob/main/HoloSeqOverview.md) to create a plot.
 The display application is given pre-computed plot coordinates, and enough header information about the reference sequence or sequences, 
 to add tic marks to the axes and to back-calculate the stream of user tap coordinates. A converter for PAF to compressed hseq format for input is 
 available and was used to generate the demonstration. Other common genomic annotation formats, such as bigwig and bed will be provided. 
