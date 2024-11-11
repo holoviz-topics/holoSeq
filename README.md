@@ -18,7 +18,7 @@ A draft framework [specification is here.](https://github.com/fubar2/holoSeq/blo
 ## Quick start demonstration
 
 Requires both Python and the python-venv module installed. 
-These steps ensure that the virtual environment directory can be made and deleted without any other changes to your system.
+These steps ensure that the pop-up virtual environment directory can be made and destroyed without any permanent or destructive changes to your system.
 
 1. Clone this repository in a convenient and disposable directory:
 

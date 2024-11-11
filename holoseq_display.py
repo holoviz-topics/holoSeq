@@ -16,8 +16,6 @@ from bisect import bisect_left
 from collections import OrderedDict
 import gzip
 import numpy as np
-import os
-import sys
 
 import holoviews as hv
 import panel as pn
@@ -36,8 +34,8 @@ holoSeqHeaders = ["@v1HoloSeq1D", "@v1HoloSeq2D"]
 hv.extension("bokeh")
 pn.extension()
 
-dynspread.max_px = 8
-dynspread.threshold = 0.5
+dynspread.max_px = 9
+dynspread.threshold = 0.6
 
 
 def xportHtml(fname, hObj):
@@ -69,6 +67,7 @@ class holoSeq_maker:
         ycoords = []
         annos = []
         metadata = {}
+        gffdata = []
         hsDims = None
         plotType = None
         with gzip.open(inFile, "rt") as f:
@@ -172,25 +171,28 @@ class holoSeq_maker:
                                 )
                                 return
                     else:
-                        if srow[0].isdigit():
-                            xcoords.append(int(srow[0]))
-                            if lrow > 1:
-                                ycoords.append(int(srow[1]))
-                            if lrow > 2:
-                                annos.append(srow[2:])
+                        if metadata.get("GFF", None):
+                            gffdata.append(srow)
                         else:
-                            print(
-                                "At row",
-                                i,
-                                "Supplied 1D input",
-                                inFile,
-                                "has",
-                                trow,
-                                "which does not parse into x coordinate and optional annotation",
-                            )
-                            return
+                            if srow[0].isdigit():
+                                xcoords.append(int(srow[0]))
+                                if lrow > 1:
+                                    ycoords.append(int(srow[1]))
+                                if lrow > 2:
+                                    annos.append(srow[2:])
+                            else:
+                                print(
+                                    "At row",
+                                    i,
+                                    "Supplied 1D input",
+                                    inFile,
+                                    "has",
+                                    trow,
+                                    "which does not parse into x coordinate and optional annotation",
+                                )
+                                return
 
-        return (hsDims, haps, xcoords, ycoords, annos, plotType, metadata)
+        return (hsDims, haps, xcoords, ycoords, annos, plotType, metadata, gffdata)
 
     def makePafPanel(self, inFile, pwidth):
         """
@@ -263,10 +265,10 @@ class holoSeq_maker:
             )
             return str_pane
 
-        (hsDims, hapsread, xcoords, ycoords, annos, plotType, metadata) = (
+        (hsDims, hapsread, xcoords, ycoords, annos, plotType, metadata, gffdata) = (
             self.import_holoSeq_data(inFile)
         )
-        title = ' '.join(metadata["title"])
+        title = " ".join(metadata["title"])
         hqstarts = OrderedDict()
         haps = []
         print("Read nx=", len(xcoords), "ny=", len(ycoords))
@@ -282,7 +284,7 @@ class holoSeq_maker:
                     h1starts.append(cstart)
                     h1names.append(contig)
         hap = haps[0]
-        
+
         qtic1 = [(h1starts[i], h1names[i]) for i in range(len(h1starts))]
         qtic2 = qtic1
         isTrans = False
@@ -372,8 +374,10 @@ class holoSeq_maker:
             )
             return str_pane
 
-        (hsDims, hapsread, xcoords, ycoords, annos, plotType, metadata) = self.import_holoSeq_data(inFile)
-        title = ' '.join(metadata["title"])
+        (hsDims, hapsread, xcoords, ycoords, annos, plotType, metadata, gffdata) = (
+            self.import_holoSeq_data(inFile)
+        )
+        title = " ".join(metadata["title"])
         haps = []
         print("Read nx=", len(xcoords), "ny=", len(ycoords))
         h1starts = []
@@ -391,6 +395,133 @@ class holoSeq_maker:
         print("qtic1=", qtic1[:20])
 
         pafxy = pd.DataFrame.from_dict({"x": xcoords, "coverage": ycoords})
+        taps = hv.streams.Tap(x=0, y=0)
+        showloc = pn.bind(showX, x=taps.param.x, y=taps.param.y)
+        # to rotate so the diagonal becomes the x axis
+        # xcis1r, ycis1r = rotatecoords(xcis1, ycis1, radians=0.7853981633974483, origin=(max(xcis1),max(ycis1)))
+        # pafxycis1 = pd.DataFrame(np.vstack([xcis1r,ycis1r]).T, columns = ['x', 'y'])
+        # bisect.bisect_left(a, x, lo=0, hi=len(a), *, key=None)
+        # prepare and show the 3 plots
+        # points = [(50*i, 100+random.random()) for i in range(10000)]
+        # hv.Curve(points).opts(interpolation='steps-post').opts(width=1000)
+        bigw = pn.pane.HoloViews(
+            decimate(hv.Curve(pafxy), streams=[taps])
+            .opts(interpolation="steps-pre", color="darkblue")
+            .relabel("%s" % title)
+            .opts(
+                width=pwidth,
+                height=300,
+                xticks=qtic1,
+                xrotation=45,
+                fontsize={"xticks": 8, "yticks": 10},
+                scalebar=True,
+                scalebar_range="x",
+                scalebar_location="top_left",
+                scalebar_unit=("bp"),
+                show_grid=True,
+                ylim=(-0.1, 200),
+                tools=[
+                    "xwheel_zoom",
+                    "tap",
+                    "xpan",
+                    "reset",
+                ],
+                default_tools=[],
+                active_tools=["xwheel_zoom", "tap", "pan"],
+            )
+        )
+
+        p1 = pn.Column(showloc, bigw)
+
+        return p1, title
+
+    def makeGFFPanel(self, inFile, pwidth):
+        """
+        prepare a complete panel for the final display
+        """
+
+        def showX(x, y):
+            if np.isnan(x):
+                s = "Mouse click on image for location"
+            else:
+                i = bisect_left(h1starts, x)
+                chrx = h1names[i - 1]
+                offsx = x - h1starts[i - 1]
+                s = "%s:%d" % (chrx, offsx)
+            str_pane = pn.pane.Str(
+                s,
+                styles={
+                    "font-size": "10pt",
+                    "color": "darkblue",
+                    "text-align": "center",
+                },
+                width=pwidth,
+            )
+            return str_pane
+
+        (hsDims, hapsread, xcoords, ycoords, annos, plotType, metadata, gffdata) = (
+            self.import_holoSeq_data(inFile)
+        )
+        mrna = {
+            "x1": [],
+            "x2": [],
+            "y1": [],
+            "y2": [],
+            "target": [],
+            "score": [],
+            "strand": [],
+            "stopc": [],
+        }
+        cds = {
+            "x1": [],
+            "x2": [],
+            "y1": [],
+            "y2": [],
+            "target": [],
+            "score": [],
+            "strand": [],
+        }
+        for row in gffdata:
+            offset = contigs[row[1]]
+            if row[0] == "mrna":
+                (type, contig, targ, startp, endp, y1, y2, strand, score, stopc) = row[
+                    :10
+                ]
+                mrna["mRNA"].append(targ)
+                mrna["x1"].append(startp + offset)
+                mrna["x2"].append(endp + offset)
+                mrna["y1"].append(y1)
+                mrna["y2"].append(y2)
+                mrna["strand"].append(strand)
+                mrna["score"].append(scoore)
+                mrna["stopc"].append(stopc + offset)
+            else:
+                (type, contig, targ, startp, endp, y1, y2, strand, score) = row[:9]
+                cds["mRNA"].append(targ)
+                cds["x1"].append(startp + offset)
+                cds["x2"].append(endp + offset)
+                cds["y1"].append(y1)
+                cds["y2"].append(y2)
+                cds["strand"].append(strand)
+                cds["score"].append(scoore)
+        mdf = pd.DataFrame.from_dict(mrna)
+        cdf = pd.DataFrame.from_dict(cds)
+        title = " ".join(metadata["title"])
+        haps = []
+        print("GFF rows read =", len(gffdata))
+        h1starts = []
+        h1names = []
+        for i, hap in enumerate(hapsread.keys()):
+            haps.append(hap)
+            for j, contig in enumerate(hapsread[hap]["cn"]):
+                cstart = hapsread[hap]["startpos"][j]
+                h1starts.append(cstart)
+                h1names.append(contig)
+        hap = haps[0]
+        print("h1names=", h1names[:20])
+        # qtic1 = [(hqstarts[hap][x], x) for x in hqstarts[hap].keys()]
+        qtic1 = [(h1starts[i], h1names[i]) for i in range(len(h1starts))]
+        print("qtic1=", qtic1[:20])
         taps = hv.streams.Tap(x=0, y=0)
         showloc = pn.bind(showX, x=taps.param.x, y=taps.param.y)
         # to rotate so the diagonal becomes the x axis

@@ -169,7 +169,6 @@ def parseGFF(gff3):
             for z in y.sub_features:
                 featList.append(z)
     print(2, len(featList))
-    print(featList)
     gff = {"start": [], "end": [], "strand": [], "type": [], "qualifiers": []}
     for f in featList:
         gff["start"].append(int(f.location.start))
@@ -188,5 +187,6 @@ if __name__ == "__main__":
     parser.add_argument("gff3", type=argparse.FileType("r"), help="GFF3 File")
     args = parser.parse_args()
     gff = parseGFF(args.gff3)
-    
-    # print(gff)
+    print('types=', list(set(gff['type'])))
+    print('qual=',(gff['qualifiers']))
+
