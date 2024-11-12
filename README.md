@@ -22,6 +22,13 @@ this repository's root, as:
 > panel serve holoSeq_random.py --show
 
 Edit the default 10000 xmax value to get a sense of scale capacity - 10M is not a problem.
+Most of the code is needed to create some sample contigs of fixed length into some arbitrary ordering along the axes.
+Their lengths are cumulated and the resulting array represents axis offsets to the starting nucleotide of each contig,
+used for calculating the x and y coordinates for randomly generated points so the are correctly located
+in an internally consistent 2D space. 
+
+This is proposed as a generalisable model for a linear display of genomic features located on a set of independent contigs in
+holoSeq displays.
 
 ```
 # see https://github.com/fubar2/holoSeq
