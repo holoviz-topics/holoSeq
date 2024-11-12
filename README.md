@@ -15,32 +15,20 @@ This is new work in progress.
 Development started in late October 2024. 
 A draft framework [specification is here.](https://github.com/fubar2/holoSeq/blob/main/HoloSeqOverview.md). 
 
-## Minimal 2D illustration
-### Features located on intervals arranged along a linear axes. 
+## Core idea: Features on intervals arranged along linear axes for browsing
 
-This runs in a notebook or can be served more simply if the dependencies are available, from
-the repository root, as
+This proof of concept runs in a notebook, or if the dependencies are available, can be served from
+this repository's root, as:
 > panel serve holoSeq_random.py --show
 
 ```
 # see https://github.com/fubar2/holoSeq
-# illustrates some of the basic ideas in converting
-# a set of features that have been mapped to a genome into a 
-# linear or in this case 2D display.
-# a tap will reveal the current x and y positions backcalculated from the
-# cumulated start positions of the contigs.
-# 
-# panel serve holoSeq_random.py --show
-#
-# should pop up 10000 points.
-# try 10 million - still works smoothly
-# Needs depenencies - uncomment and run the next line to install them
+# Needs dependencies - uncomment and run the next line to install them in a notebook
 # ! pip install datashader dask[dataframe] holoviews[recommended] pandas matplotlib bokeh
 #
 
 from bisect import bisect_left
 from collections import OrderedDict
-import gzip
 import itertools
 import numpy as np
 
@@ -120,7 +108,7 @@ pnc = pn.Column(
 pnc.servable(title=title, )
 ```
 
-## Quick start demonstration
+## Demonstration with millions of pairs from HiC data
 
 Requires both Python and the python-venv module installed. 
 These steps ensure that the virtual environment directory can be made and deleted without any other changes to your system.
@@ -163,11 +151,12 @@ When the plot appears, the view is controlled by the usual Bokeh tools in the to
 - Only pairs involving H1 contigs (H1 cis) are used in the demonstration.
 
 Briefly, the framework creates the [minimum data required](https://github.com/fubar2/holoSeq/blob/main/HoloSeqOverview.md) to create a plot.
-The display application is given pre-computed plot coordinates, and enough header information about the reference sequence or sequences, 
-to add tic marks to the axes and to back-calculate the stream of user tap coordinates. A converter for PAF to compressed hseq format for input is 
-available and was used to generate the demonstration. Other common genomic annotation formats, such as bigwig and bed will be provided. 
-Scaling and zooming rely on datashader running on a Holoviews or Bokeh server. Static images can be captured. 
-Interactive HTML can be exported, but without a datashader provider, zoomed detail is limited. 
+A genome lengths file is required, and the named contigs can be reordered by name or length. The axes are defined by the ordering. The
+lengths are cumulated to give an offset to the first nucleotide of each contig, so the track can be read and feature locations 
+converted into the plot coordinate system, and stored as a compressed intermediate file. The display application reads these pre-computed plot 
+coordinate files, with enough metadata about the reference sequence to add tic marks to the axes and to back-calculate the stream of user tap coordinates. 
+A converter for PAF to compressed hseq format for input is available and was used to generate the demonstration. 
+Bigwig is working and other common genomic annotation formats, such as gff and vcf will follow. 
 
 Multiple input files will produce a stack of plots that work independently:
 
