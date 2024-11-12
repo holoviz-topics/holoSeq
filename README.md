@@ -20,6 +20,7 @@ A draft framework [specification is here.](https://github.com/fubar2/holoSeq/blo
 This proof of concept runs in a notebook, or if the dependencies are available, can be served from
 this repository's root, as:
 > panel serve holoSeq_random.py --show
+Try increasing xmax to 1 or 10 million to get a sense of scale capacity.
 
 ```
 # see https://github.com/fubar2/holoSeq
