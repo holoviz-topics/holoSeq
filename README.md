@@ -15,9 +15,11 @@ This is new work in progress.
 Development started in late October 2024. 
 A draft framework [specification is here.](https://github.com/fubar2/holoSeq/blob/main/HoloSeqOverview.md). 
 
-## Minimal example
+## Minimal 2D illustration
+### Features located on intervals arranged along a linear axes. 
 
-This runs in a notebook or can be served more simply as
+This runs in a notebook or can be served more simply if the dependencies are available, from
+the repository root, as
 > panel serve holoSeq_random.py --show
 
 ```
