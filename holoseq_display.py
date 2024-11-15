@@ -358,7 +358,7 @@ class holoSeq_maker:
                 dynspread(rasterize(pafp), streams=[stream])
                 .relabel("%s" % title)
                 .opts(
-                    shared_axes=False,
+                    shared_axes=True,
                     cmap="inferno",
                     cnorm="log",
                     colorbar=True,
@@ -461,6 +461,15 @@ class holoSeq_maker:
     def makeGFFPanel(self, inFile, pwidth):
         """
         prepare a complete panel for the final display
+
+        html_content = plot_file.read()
+escaped_html = html.escape(html_content)
+
+# Create iframe embedding the escaped HTML and display it
+iframe_html = f'<iframe srcdoc="{escaped_html}" style="height:100%; width:100%" frameborder="0"></iframe>'
+
+# Display iframe in a Panel HTML pane
+pn.pane.HTML(iframe_html, height=350, sizing_mode="stretch_width")
         """
 
         def showX(x, y):
@@ -471,10 +480,9 @@ class holoSeq_maker:
                 chrx = h1names[i - 1]
                 offsx = x - h1starts[i - 1]
                 s = "%s:%d" % (chrx, offsx)
-                xi = bisect_left(segs['x1'], x)
+                xi = bisect_left(segs[xcf], x)
                 xtarget = segs['target'][xi]
-                yreal = segs['y1'][xi]
-                s += ' x %s xy %d real y %d' % (xtarget, yreal, y )
+                s += ' x %s' % (xtarget )
 
             str_pane = pn.pane.Str(
                 s,
@@ -489,10 +497,11 @@ class holoSeq_maker:
             return str_pane
 
         (hsDims, hapsread, xcoords, ycoords, annos, plotType, metadata, gffdata) = self.import_holoSeq_data(inFile)
+        xcf = os.path.splitext(metadata["xclenfile"][0])[0]
         segs = {
-            "x1": [],
+            xcf: [],
             "x2": [],
-            "y1": [],
+            "wy1": [],
             "y2": [],
             "target": [],
             "colour": [],
@@ -504,7 +513,7 @@ cds XP_026238700.1 1401967516 1401967635 100 100 - 204
 mrna XP_026248570.1 SUPER_3H1 531341254 531595863 100 100 + 1102 -1
 cds XP_026248570.1 531341254 531341334 100 100 + 134
         """
-        mthick = 4
+        mthick = 3
         cdthick = 50
         for i, rows in enumerate(gffdata):
             if rows[0].lower() == "mrna":
@@ -513,11 +522,13 @@ cds XP_026248570.1 531341254 531341334 100 100 + 134
                 endp = int(endp)
                 y1 = int(y1)
                 y2 = int(y2)
-                colr = "black"
+                colr = "blue"
+                if strand == "-":
+                    colr = "maroon"        
                 segs["target"].append(targ)
-                segs["x1"].append(startp)
+                segs[xcf].append(startp)
                 segs["x2"].append(endp)
-                segs["y1"].append(y1)
+                segs["wy1"].append(y1)
                 segs["y2"].append(y2)
                 segs["colour"].append(colr)
                 segs["thickness"].append(mthick)
@@ -532,17 +543,17 @@ cds XP_026248570.1 531341254 531341334 100 100 + 134
                 if strand == "-":
                     colr = "maroon"        
                 segs["target"].append(targ)
-                segs["x1"].append(startp)
+                segs[xcf].append(startp)
                 segs["x2"].append(endp)
-                segs["y1"].append(y)
+                segs["wy1"].append(y)
                 segs["y2"].append(y)
                 segs["colour"].append(colr)
                 segs["thickness"].append(cdthick)
-                segs["alpha"].append(0.5)
-        xmin = min(segs["x1"])
+                segs["alpha"].append(1.0)
+        xmin = min(segs[xcf])
         xmax = max(segs["x2"])
-        ymin = min(segs["y1"])
-        ymax = max(segs["y1"])
+        ymin = min(segs["wy1"])
+        ymax = max(segs["wy1"])
         title = " ".join(metadata["title"])
         haps = []
         print("GFF rows read =", len(gffdata))
@@ -561,7 +572,7 @@ cds XP_026248570.1 531341254 531341334 100 100 + 134
         # qtic1 = [(hqstarts[hap][x], x) for x in hqstarts[hap].keys()]
         # print("qtic1=", qtic1[:20])
         gffp = hv.Segments(
-            segs, ['x1', 'y1', 'x2', 'y2'], vdims=["target", "colour", "thickness", "alpha"]
+            segs, [xcf, 'wy1', 'x2', 'y2'], vdims=["target", "colour", "thickness", "alpha"]
             )
 
         gffp.opts(color="colour",
@@ -571,9 +582,14 @@ cds XP_026248570.1 531341254 531341334 100 100 + 134
             height=300,
             xticks=qtic1,
             xrotation=45,
+            scalebar=True,
+            scalebar_range="x",
+            scalebar_location="bottom_left",
+            scalebar_unit=("bp"),
             fontsize={"xticks": 8, "yticks": 10},
             show_grid=True,
             #ylim=(50 , 105),
+            autorange='y',
             tools=[
                 "xwheel_zoom",
                 "box_zoom",
@@ -583,9 +599,9 @@ cds XP_026248570.1 531341254 531341334 100 100 + 134
             ],
             default_tools=[],
             active_tools=["xwheel_zoom", "tap", "xpan"],
+            shared_axes=True
             )
-        apply_when(gffp, operation=datashade, predicate=lambda x: x > 1000)
-
+        apply_when(gffp, operation=rasterize, predicate=lambda x: len(x) > 5000)
         taps = hv.streams.Tap(source=gffp, x=0, y=0)
         showloc = pn.bind(showX, x=taps.param.x, y=taps.param.y)
         gp = pn.pane.HoloViews(gffp)
