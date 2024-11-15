@@ -37,9 +37,11 @@ Whatever the stage of assembly and polishing, genomes are typically handled in f
 For an interactive genome browser, tracks typically run horizontally, from the start of the reference sequence on the left to the last nucleotide of the last contig.
 
 Holoviews dynamic maps require ordinal axis coordinates. Contigs must be ordered on the axes, usually by name or by length,
-so they can be mapped as axes, with tick marks and labels.
+so they can be mapped as axes, with tick marks and labels. The ordering is arbitrary - there is no natural order to chromosomes in a nucleus. During assembly, ordering is usually by size
+or name, but each group assembling genomes may have different rules. Edge effects where two physically independent pieces have been placed sequentially are artifactual. There is a logic
+to the contig based system of browsing offered by most conventional genome browsers such as J Browse2 or the UCSC genme browser.
 
-Features must have a position to locate them in the reference sequence used to create the axis. 
+Features must have axis coordinates that position them correctly in the reference sequence used to create the axis. 
 Position is usually described by the name of the contig, and the number of bases from the start of the contig to the start of the feature. 
 Some features have a length while others for 2D grids are points. Many features may have optional annotation.
 
@@ -65,9 +67,9 @@ The text file must start with a header section, where every row begins with `@`.
 
 The first row of the must be either `@v1HoloSeq1D [bar|scatter|line]` or `@v1HoloSeq2D`, or the data will not be processed.
 
-Rows starting with '@@' are metadata, such as the plot title, and the URI and name of the reference sequence or haplotype.
+Rows starting with `@@` are metadata, such as the plot title, and the URI and name of the reference sequence or haplotype.
 
-For 1D data, the chart type may be one of `bar`, `scatter` or `line`. Default is `bar`. Regions with 4 or more SD above or below the global mean are 
+For 1D data, the chart type may be one of `bar`, `scatter` or `line`. Default is `bar`. Regions with 4 or more SD above or below the global mean can be 
 emphasised
 
 2D data will be presented as an autoscaling density heatmap. The header and data might only have 1 axis name, for example where HiC pairs from one haplotype are plotted

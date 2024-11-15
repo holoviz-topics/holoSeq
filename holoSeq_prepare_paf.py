@@ -1,7 +1,10 @@
 # for Mashmap paf, python holoSeq_prepare_paf.py --inFile  hg002_2k99.paf --title "hg002 Mashmap" --hap_indicator None --contig_sort length
 # for HiC pairs
 # python holoSeq_prepare_paf.py --inFile mUroPar1H1H2.paf --xclenfile mUroPar1H1suffix.len --yclenfile mUroPar1H2suffix.len --contig_sort VGPname --hap_indicator Suffix --title "VGP mUroPar1 HiC data"
+# panel serve holoseq_display.py --show --args --inFile mUroPar1H1H2.paf_cisH1_hseq.gz mUroPar1H1H2.paf_cisH2_hseq.gz mUroPar1H1H2.paf_trans_hseq.gz  --size 1000
 #
+# python holoSeq_prepare_paf.py --inFile mUroPar1_protH1.gff --xclenfile mUroPar1H1suffix.len --contig_sort VGPname --title "mUroPar1 NCBI protein GFF"
+
 # Proof of cocept data are Arima HiC reads from the Arctic Ground Squirrel mUroPar1 VGP genomeArk repository
 # processed with Dephine's Pretext workflow using Bellerophon to remove chimeric reads
 # The paired bam output is converted to PAF with an awk script (!) and that's what is read
@@ -26,6 +29,8 @@ from functools import cmp_to_key
 from pathlib import Path
 
 import gzip
+import itertools
+import logging
 import math
 import random
 import re
@@ -33,6 +38,8 @@ import os
 
 import pybigtools
 
+logging.basicConfig(level=logging.DEBUG)
+log = logging.getLogger("holoseq_display")
 
 # inFile = "galaxy_inputs/paf/bothmap.paf.tab.tabular"
 inFile = "/home/ross/rossgit/holoviews-examples/huge.paf"
@@ -42,6 +49,10 @@ holoSeqHeaders = ["@v1HoloSeq1D", "@v1HoloSeq2D"]
 
 def rotatecoords(x, y, radians=0.7853981633974483, origin=(0, 0)):
     # https://gist.github.com/LyleScott/d17e9d314fbe6fc29767d8c5c029c362
+    # to rotate so the diagonal becomes the x axis
+    # this inflates by sqrt(2) so would need to rescale 1D tracks - not sure that's ideal but worth trying.
+    # xcis1r, ycis1r = rotatecoords(xcis1, ycis1, radians=0.7853981633974483, origin=(max(xcis1),max(ycis1)))
+    # pafxycis1 = pd.DataFrame(np.vstack([xcis1r,ycis1r]).T, columns = ['x', 'y'])
     offset_x, offset_y = origin
     adjusted_x = x - offset_x
     adjusted_y = y - offset_y
@@ -76,7 +87,7 @@ def getContigs(lenFile):
         for i, row in enumerate(lf):
             c, clen = row.split()[:2]
             if seen.get(c, None):
-                print("Contig %s seen again at row %d of %s" % (c, i, lenFile))
+                log.debug("Contig %s seen again at row %d of %s" % (c, i, lenFile))
             else:
                 seen[c] = c
                 contigs.append((c, int(clen)))
@@ -84,20 +95,30 @@ def getContigs(lenFile):
 
 def VGPsortfunc(s1, s2):
     """
-    # fugly hack to sort super contigs before anything else
+    # big fugly hack to sort super contigs before anything else
     # then by contig number or if they are the same offset
-    # ('SUPER_2H1', 226668729) , ('SUPER_1H1', 284260672), ('SUPER13_unloc_5H1',..), (Scaffold_1116H2, ...)
-    # or chr10_H1 etc
+    # ('SUPER_2H1', 226668729) , ('SUPER_1H1', 284260672), ('SUPER13_unloc_5H1',..), (Scaffold_aa16H2, ...)
+    # or chr10H1 etc
     # always work with uppercase
     # ^([^_]+)_(\S+)H[12]{1}$ gives group1 SUPER or Scaffold and group2 X or 22
-    #     ^([^_]+)_([^_]+)_unloc_(\S+)H[12]{1}$ gives super 11 x for super_11_unloc_XH2
+    #     ^([^_]+)_([^_]+)_unloc_(\S+)H[12]{1}$ gives super aa x for super_aa_unloc_XH2
     """
 
-    ss1 = re.compile(r'^([^_]+)_(\S+)H[12]{1}$')
-    ss2 = re.compile(r'^([^_]+)_([^_]+)_UNLOC_(\S+)H[12]{1}$')
+    ss1 = re.compile(r'^([^_]+)_(\S+)H[12]{1}$') # should match VGP non-unloc - super/chr/scaffold. Always uppercase at entry.
+    ss2 = re.compile(r'^([^_]+)_([^_]+)_UNLOC_(\S+)H[12]{1}$') # for the unloc
+
+    def intOrd(n):
+        "x, y, z, w typically sex chromosomes - there be some weird beasts"
+        if n:
+            n = n.replace('_','').replace('chr', '') # in case chr_aa or something
+            if n.isdigit():
+                return int(n)
+            else:
+                return ord(n[0])
+        else:
+            return None
 
     def matchme(s):
-        c1 = n1 = n2 = None
         found = ss2.search(s)
         if found:
             c1, n1, n2 = found.groups()[:3]
@@ -105,29 +126,34 @@ def VGPsortfunc(s1, s2):
             found = ss1.search(s)
             if found:
                 c1, n1 = found.groups()[:2]
-        if n1:
-            if n1.isdigit():
-                n1 = int(n1)
+                n2 = None
             else:
-                n1 = ord(n1[0])
-        if n2:
-            if n2.isdigit():
-                n2 = int(n2)
-            else:
-                n2 = ord(n2[0])
-        #print('c1, n1, n2 =', c1, n1, n2)
+                c1 = n1 = n2 = None
+        n1 = intOrd(n1)
+        n2 = intOrd(n2)
         return c1, n1, n2
 
+            
     if s1[0] == s2[0]:  # simplest case - same contig, sort on offset
         return s1[1] - s2[1]  # neg if left sorts before
+    else: # deal with chr - assume no dashes?
+        if 'chr' in s1[0].lower():
+            if 'chr' in s2[0].lower(): # punt for chr22H2 or so 
+                n1 = intOrd(s1[0].lower())
+                n2 = intOrd(s2[0].lower())
+                return n1 - n2
+            else:
+                return -1 # put chr first
+        elif 'chr' in s2[0].lower():
+            return 1
     u1 = "unloc" in s1[0].lower()
     u2 = "unloc" in s2[0].lower()
     if u1 and not u2:
-        return 1 # unloc goes after
+        return 1 # u1 unloc goes after
     elif u2 and not u1:
-        return -1 # unloc goes after
-    isSuper1 = (not u1) and (("super" in s1[0].lower()) or ("chr" in s1[0].lower()))
-    isSuper2 = (not u2) and (("super" in s2[0].lower()) or ("chr" in s2[0].lower()))
+        return -1 # u1 goes before unloc
+    isSuper1 = (not u1) and (("super" in s1[0].lower()))
+    isSuper2 = (not u2) and (("super" in s2[0].lower()))
     isScaff1 = (not u1) and (("scaffold" in s1[0].lower()))
     isScaff2 = (not u2) and (("scaffold" in s2[0].lower()))
     if isSuper1 and not isSuper2:
@@ -136,76 +162,19 @@ def VGPsortfunc(s1, s2):
         return 1
     # Must parse
     
-    c1, n11, n12 = matchme(s1[0].upper())
-    c2, n21, n22 = matchme(s2[0].upper())
+    c1, naa, nab = matchme(s1[0].upper())
+    c2, nba, nbb = matchme(s2[0].upper())
     if not c1 or not c2:
-        print('no match for ss1 and/or ss2 =', ss1, ss2)
+        log.debug('no match for ss1 %s and/or ss2 %s' % (ss1, ss2))
         return 0
     else:
-        if isSuper1 or isScaff1: # must both be supers or scaffolds
-            return n11 - n21
+        if isSuper1 or (isScaff1 and isScaff2): # if a super must both be supers or if both are scaffolds
+            return naa - nba
         else: # must both be unlocs
-            #print('both unlocs s1, s2, n11, n12, n21, n22', s1, s2, n11, n12, n21, n22)
-            if n11 == n21:
-                return n12 - n22
+            if naa == nba:
+                return nab - nbb
             else:
-                return n11 - n21
-
-
-def VGPsortfunc0(s1, s2):
-    """
-    fugly hack to sort super contigs before anything else
-    then by contig number or if they are the same offset
-    ('SUPER_2H1', 226668729) , ('SUPER_1H1', 284260672), ('SUPER13_unloc_5H1',..), (Scaffold_1116H2, ...)
-    or chr10_H1 etc
-    """
-    if s1[0] == s2[0]:  # simplest case - same contig, sort on offset
-        return s1[1] - s2[1]  # neg if left sorts before
-    sorts = [{}, {}]
-    for i, (contig, length) in enumerate([s1, s2]):
-        if "_" in contig:
-            conta, contb = [x.upper() for x in contig.split("_", 1)]
-        else:
-            conta = contig.upper()
-            contb = ""
-        if "UNLOC" in contig.upper():
-            unloc = True
-            contign = conta.split("_")[0]
-        else:
-            unloc = False
-            contign = contb
-        if conta.startswith("CHR"):
-            contign = conta.replace("CHR", "").replace("_", "")
-        if contign.isdigit():
-            nval = int(contign)
-        elif contign[:-2].isdigit():  # suffix H2 is VGP standard
-            nval = int(contign[:-2])
-        else:
-            nval = ord(contign[0])  # ensure X and Y sort to the end
-        is_super = not unloc
-        sorts[i]["is_super"] = is_super
-        sorts[i]["n"] = nval
-        sorts[i]["conta"] = conta
-        sorts[i]["unloc"] = unloc
-    if sorts[0]["is_super"] and not sorts[1]["is_super"]:
-        return -1
-    elif sorts[1]["is_super"] and not sorts[0]["is_super"]:
-        return 1
-    elif sorts[0]["is_super"] and sorts[1]["is_super"]:
-        return sorts[0]["n"] - sorts[1]["n"]
-    elif sorts[0]["conta"] == sorts[1]["conta"]:
-        return sorts[0]["n"] - sorts[1]["n"]
-    elif sorts[0]["conta"] in ["SUPER", "CHR"]:
-        return -1
-    elif sorts[1]["conta"] in ["SUPER", "CHR"]:
-        return 1
-    else:
-        nunder1 = len(sorts[0]["conta"].split("_"))
-        nunder2 = len(sorts[1]["conta"].split("_"))  # _unloc or whatever
-        if nunder1 == nunder2:
-            return sorts[0]["n"] - sorts[1]["n"]
-        else:
-            return nunder1 - nunder2
+                return naa - nba
 
 
 def Lengthsortfunc(s1, s2):
@@ -215,18 +184,18 @@ def Lengthsortfunc(s1, s2):
 
 def contsort(contigs, args):
     # sort and return offsets to starts of each contig
+    # hstarts = list(itertools.accumulate(hlens))
     if args.contig_sort.lower() == "vgpname":
         contigs.sort(key=cmp_to_key(VGPsortfunc))
     elif args.contig_sort.lower() == "name":
         contigs.sort()
     elif args.contig_sort.lower() == "length":
         contigs.sort(key=cmp_to_key(Lengthsortfunc), reverse=True)
-    scont = OrderedDict()
-    cum = 0
-    for i, (cont, clen) in enumerate(contigs):
-        scont[cont] = cum
-        cum += int(clen)
-    #print('scont=', scont)
+    clens = [x[1] for x in contigs]
+    cnames = [x[0] for x in contigs]
+    cstarts = list(itertools.accumulate(clens))
+    cstarts.insert(0,0) # first one starts at 0
+    scont = OrderedDict(zip(cnames,cstarts))
     return scont
 
 
@@ -241,36 +210,38 @@ class gffConvert:
     def __init__(self, gff, outFname, contigs, args):
         mrnaseen = {}
         stopcodons = {}
-        mrna = []
-        cds = {}
+        segs = {}
         comment = "#"
-        self.hsId = "@v1HoloSeq2D"
+        self.hsId = "@v1HoloSeq1D"
         self.inFname = gff
+        print('contigs=', str(contigs)[:1000])
         with open(gff) as g:
             for i, row in enumerate(g):
                 if not row.startswith(comment):
-                    rs = row.split()
-                    (id, name, kind, startp, endp, score, strand, phase, text) = rs[:9]
+                    (id, name, kind, startp, endp, score, strand, phase, text) = [x.strip() for x in row.split()[:9]]
+                    if not segs.get(id,None):
+                        segs[id] = []
+                    if kind.lower() in ['cds', 'mrna']:
+                        anno = text.split(";")
+                        tanno = [
+                            x.strip()[7:]
+                            for x in anno
+                            if x.lower().startswith("target=")
+                        ]
+                        target = tanno[0]
                     startp = int(startp)
                     endp = int(endp)
-                    offset = contigs.get(id, None)
-                    if not offset and args.addH1:
-                        offset = contigs.get(id + "H1", None)
+                    offset = contigs.get(id, -1)
+                    if args.addH1 and offset < 0:
+                        offset = contigs.get(id + "H1", -1)
                         id = id + "H1"
-                    if not offset:
+                    if offset < 0:
                         print(
-                            "Ignored gff3 id %s missing from supplied xcontigs, in row %d of %s with addH1=%s"
-                            % (id, i, gff, args.addH1)
+                            "Ignored gff3 id %s missing from supplied xcontigs, in row %d %s of %s with addH1=%s"
+                            % (id, i,row, gff, args.addH1)
                         )
                     else:
                         if kind.lower() == "mrna":
-                            anno = text.split(";")
-                            tanno = [
-                                x.strip()[7:]
-                                for x in anno
-                                if x.lower().startswith("target=")
-                            ]
-                            target = tanno[0]
                             if target:
                                 if mrnaseen.get(target, None):
                                     print(
@@ -279,48 +250,44 @@ class gffConvert:
                                     )
                                 else:
                                     mrnaseen[target] = target
-                                mrna.append(
+                                segs[id].append(
                                     (
-                                        id,
-                                        target,
                                         startp + offset,
                                         endp + offset,
                                         strand,
                                         score,
+                                        target,
+                                        "mrna"
                                     )
                                 )
                             else:
                                 print("no target found in %s at row %d" % (text, i))
-                        elif kind.lower() == "stop_codon" and target:
-                            stopcodons[target] = startp + offset
+                        elif kind.lower() == "stop_codon" :
+                            segs[id].append((startp + offset, target, "stopc"))
                         elif kind.lower() == "cds":
-                            if cds.get(target, None):
-                                cds[target].append(
-                                    (id, startp + offset, endp + offset, strand, score)
-                                )
-                            else:
-                                cds[target] = [
-                                    (id, startp + offset, endp + offset, strand, score)
-                                ]
+                            segs[id].append((startp + offset, endp + offset, strand, score, target, "cds"))
 
-        self.export_mapping(outFname, contigs, mrna, stopcodons, cds, args)
+        self.export_mapping(outFname, contigs, segs, args)
 
-    def export_mapping(self, outFname, contigs, mrna, stopcodons, cds, args):
+    def export_mapping(self, outFname, contigs, segs, args):
         """
         for GFF
         @v1HoloSeq2D for example
+        A default  Y value of 100 is set for each mRNA's extent, but often there are dozens of different named sequences in the databases that will overlap.
+        Assuming the GFF is sorted, overlapping mRNA is identified as ending or starting in the previous extent and the y value is decremented to avoid overlap
+        Y is reset if no overlap
         """
 
         def prepHeader(contigs, args):
             """
             holoSeq output format
             """
-            h = ["@%s %d" % (k, contigs[k]) for k in contigs.keys()]
+            h = ["@%s %s %d" % (getHap(k), k, contigs[k]) for k in contigs.keys()]
             metah = [
                 self.hsId,
-                "@@GFF",
+                "@@GFF 1",
                 "@@title %s" % args.title,
-                "@@datasource %s" % "gff",
+                "@@datasource GFF",
                 "@@datafile %s" % self.inFname,
                 "@@refURI %s" % args.refURI,
                 "@@xclenfile %s" % args.xclenfile,
@@ -328,29 +295,46 @@ class gffConvert:
 
             return metah + h
 
+        def ranges_overlap(x1, x2, y1, y2):
+            # buried in https://stackoverflow.com/questions/6821156/how-to-find-range-overlap-in-python
+            if x1 == x2 or y1 == y2:
+                return False
+            return x1 <= y2 and y1 <= x2
         hdr = prepHeader(contigs, args)
 
         with gzip.open(outFname, mode="wb") as ofn:
             ofn.write(str.encode("\n".join(hdr) + "\n"))
-            lastseg = ("", 0, 0)
             y = 100
-            for i, m in enumerate(mrna):
-                (contig, targ, startp, endp, strand, score) = m
-                if startp >= lastseg[1] and startp <= lastseg[2]:
-                    y -= 2
-                else:
-                    y = 100
-                    lastseg = (targ, startp, endp)
-                stopc = stopcodons.get(targ, -1)
-                row = str.encode(
-                    f"mrna {targ} {contig} {startp} {endp} {y} {y} {strand} {score} {stopc}\n"
-                )
-                ofn.write(row)
-                for cd in cds[targ]:
-                    row = str.encode(
-                        f"cds {targ} {cd[0]} {cd[1]} {cd[2]} {y} {y} {cd[3]} {cd[4]}\n"
-                    )
-                    ofn.write(row)
+            for con in contigs.keys():
+                lastseg = ("", 0, 0)
+                subs = segs.get(con, [])
+                if len(subs) > 0:
+                    subs.sort(key=lambda x: x[0])
+                    for i, m in enumerate(subs):
+                        kind = m[-1]
+                        if kind == "mrna":
+                            (startp, endp, strand, score, targ, _) = m
+                            if ranges_overlap(lastseg[1], lastseg[2], startp, endp):
+                                y -= 1
+                            else:
+                                y = 100
+                                lastseg = (targ, startp, endp)
+                            row = str.encode(
+                            f"mrna {targ} {con} {startp} {endp} {y} {y} {strand} {score}\n"
+                            )
+                            ofn.write(row)
+                        elif kind == "cds":
+                            (startp, endp, strand, score, targ, _) = m
+                            row = str.encode(
+                                f"cds {targ} {con} {startp} {endp} {y} {y} {strand} {score}\n"
+                            )
+                            ofn.write(row)
+                        elif kind == "stopc":
+                            (startp, targ, _) = m
+                            row = str.encode(
+                                f"stopc {targ} {con} {startp}\n"
+                            )
+                            ofn.write(row)
 
 
 class bwConvert:
@@ -402,7 +386,7 @@ class bwConvert:
             """
             holoSeq output format
             """
-            h = ["@%s %d" % (k, contigs[k]) for k in contigs.keys()]
+            h = ["@%s %s %d" % (getHap(k), k, contigs[k]) for k in contigs.keys()]
             metah = [
                 self.hsId,
                 "@@bigwig" "@@title %s" % args.title,
@@ -637,6 +621,6 @@ if __name__ == "__main__":
             p = bwConvert(f, outf, args, sxcontigs)
         elif ps in [".gff3", ".gff"]:
             outf = "%s.hseq.gz" % f
-            p = gffConvert(f, outf, sxcontigs, args)
+            p = gffConvert(f, outf, sxcontigs, args) 
         else:
             print(f, "unknown type - cannot process")

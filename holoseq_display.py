@@ -15,7 +15,9 @@ import argparse
 from bisect import bisect_left
 from collections import OrderedDict
 import gzip
+import logging
 import numpy as np
+import os
 
 import holoviews as hv
 import panel as pn
@@ -24,9 +26,29 @@ import pandas as pd
 from holoviews.operation.datashader import (
     rasterize,
     dynspread,
+    datashade,
 )
+from holoviews.operation.element import apply_when
 from holoviews.operation.resample import ResampleOperation2D
 from holoviews.operation import decimate
+
+
+logging.basicConfig(level=logging.DEBUG)
+log = logging.getLogger("holoseq_display")
+
+from holoviews import opts
+from holoviews.operation.datashader import datashade, rasterize, shade, dynspread, spread
+
+
+hv.extension('bokeh','matplotlib', width=100)
+
+# Default values suitable for this notebook
+decimate.max_samples=1000
+dynspread.max_px=20
+dynspread.threshold=0.5
+ResampleOperation2D.width=250
+ResampleOperation2D.height=250
+
 
 # inFile = "galaxy_inputs/paf/bothmap.paf.tab.tabular"
 inFile = "/home/ross/rossgit/holoviews-examples/holoSeqtest.gz"
@@ -34,7 +56,7 @@ holoSeqHeaders = ["@v1HoloSeq1D", "@v1HoloSeq2D"]
 hv.extension("bokeh")
 pn.extension()
 
-dynspread.max_px = 9
+dynspread.max_px = 7
 dynspread.threshold = 0.6
 
 
@@ -94,6 +116,8 @@ class holoSeq_maker:
                     if row.startswith("@"):
                         srow = row[1:].split()
                         metadata[srow[0]] = srow[1:]
+                        if srow[0] == "GFF":
+                            isGFF = True
                     else:
                         srow = row.split()
                         if hsDims == 2:
@@ -118,8 +142,7 @@ class holoSeq_maker:
                                 return
                         else:
                             if len(srow) >= 2:
-                                cname, cstart = srow[:2]
-                                hap = "H1"
+                                hap, cname, cstart = srow[:3]
                                 if not haps.get(hap, None):
                                     print("adding hap", hap)
                                     hh.append(hap)
@@ -137,9 +160,8 @@ class holoSeq_maker:
                                     "lacking the required reference name, contig name and contig length. Not a valid holoSeq input file",
                                 )
                                 return
-
-                else:
-                    srow = [x.strip() for x in trow.split()]
+                else:  # not header row
+                    srow = [x.strip() for x in trow.strip().split()]
                     lrow = len(srow)
                     if hsDims == 2:
                         if lrow < 2:
@@ -171,8 +193,11 @@ class holoSeq_maker:
                                 )
                                 return
                     else:
-                        if metadata.get("GFF", None):
-                            gffdata.append(srow)
+                        if isGFF:
+                            gffdata.append(
+                                srow
+                            )  # mrna XP_026254554.1 SUPER_5 1006698964 1006703995 100 100 + 3226 1006703993
+
                         else:
                             if srow[0].isdigit():
                                 xcoords.append(int(srow[0]))
@@ -310,8 +335,11 @@ class holoSeq_maker:
         # below does the plotting.
         # it can be copied, edited to suit your needs and
         # run repeatedly without waiting for the data to be mapped.
-        pafxy = pd.DataFrame.from_dict({"x": xcoords, "y": ycoords})
-        pafp = hv.Points(pafxy)
+        xcf = os.path.splitext(metadata["xclenfile"][0])[0]
+        ycf = os.path.splitext(metadata["yclenfile"][0])[0]
+        print("xcf", xcf, "ycf", ycf)
+        pafxy = pd.DataFrame.from_dict({xcf: xcoords, ycf: ycoords})
+        pafp = hv.Points(pafxy, kdims=[xcf, ycf])
 
         stream = hv.streams.Tap(x=0, y=0)
         if isTrans:
@@ -330,6 +358,7 @@ class holoSeq_maker:
                 dynspread(rasterize(pafp), streams=[stream])
                 .relabel("%s" % title)
                 .opts(
+                    shared_axes=False,
                     cmap="inferno",
                     cnorm="log",
                     colorbar=True,
@@ -393,17 +422,11 @@ class holoSeq_maker:
         # qtic1 = [(hqstarts[hap][x], x) for x in hqstarts[hap].keys()]
         qtic1 = [(h1starts[i], h1names[i]) for i in range(len(h1starts))]
         print("qtic1=", qtic1[:20])
-
-        pafxy = pd.DataFrame.from_dict({"x": xcoords, "coverage": ycoords})
+        xax = metadata["xclenfile"][0]
+        yax = metadata["yclenfile"][0] + "Bigwig value"
+        pafxy = pd.DataFrame.from_dict({xax: xcoords, yax: ycoords})
         taps = hv.streams.Tap(x=0, y=0)
         showloc = pn.bind(showX, x=taps.param.x, y=taps.param.y)
-        # to rotate so the diagonal becomes the x axis
-        # xcis1r, ycis1r = rotatecoords(xcis1, ycis1, radians=0.7853981633974483, origin=(max(xcis1),max(ycis1)))
-        # pafxycis1 = pd.DataFrame(np.vstack([xcis1r,ycis1r]).T, columns = ['x', 'y'])
-        # bisect.bisect_left(a, x, lo=0, hi=len(a), *, key=None)
-        # prepare and show the 3 plots
-        # points = [(50*i, 100+random.random()) for i in range(10000)]
-        # hv.Curve(points).opts(interpolation='steps-post').opts(width=1000)
         bigw = pn.pane.HoloViews(
             decimate(hv.Curve(pafxy), streams=[taps])
             .opts(interpolation="steps-pre", color="darkblue")
@@ -448,6 +471,11 @@ class holoSeq_maker:
                 chrx = h1names[i - 1]
                 offsx = x - h1starts[i - 1]
                 s = "%s:%d" % (chrx, offsx)
+                xi = bisect_left(segs['x1'], x)
+                xtarget = segs['target'][xi]
+                yreal = segs['y1'][xi]
+                s += ' x %s xy %d real y %d' % (xtarget, yreal, y )
+
             str_pane = pn.pane.Str(
                 s,
                 styles={
@@ -456,118 +484,114 @@ class holoSeq_maker:
                     "text-align": "center",
                 },
                 width=pwidth,
+                
             )
             return str_pane
 
-        (hsDims, hapsread, xcoords, ycoords, annos, plotType, metadata, gffdata) = (
-            self.import_holoSeq_data(inFile)
-        )
-        mrna = {
+        (hsDims, hapsread, xcoords, ycoords, annos, plotType, metadata, gffdata) = self.import_holoSeq_data(inFile)
+        segs = {
             "x1": [],
             "x2": [],
             "y1": [],
             "y2": [],
             "target": [],
-            "score": [],
-            "strand": [],
-            "stopc": [],
+            "colour": [],
+            "thickness": [],
+            "alpha": []
         }
-        cds = {
-            "x1": [],
-            "x2": [],
-            "y1": [],
-            "y2": [],
-            "target": [],
-            "score": [],
-            "strand": [],
-        }
-        for row in gffdata:
-            offset = contigs[row[1]]
-            if row[0] == "mrna":
-                (type, contig, targ, startp, endp, y1, y2, strand, score, stopc) = row[
-                    :10
-                ]
-                mrna["mRNA"].append(targ)
-                mrna["x1"].append(startp + offset)
-                mrna["x2"].append(endp + offset)
-                mrna["y1"].append(y1)
-                mrna["y2"].append(y2)
-                mrna["strand"].append(strand)
-                mrna["score"].append(scoore)
-                mrna["stopc"].append(stopc + offset)
-            else:
-                (type, contig, targ, startp, endp, y1, y2, strand, score) = row[:9]
-                cds["mRNA"].append(targ)
-                cds["x1"].append(startp + offset)
-                cds["x2"].append(endp + offset)
-                cds["y1"].append(y1)
-                cds["y2"].append(y2)
-                cds["strand"].append(strand)
-                cds["score"].append(scoore)
-        mdf = pd.DataFrame.from_dict(mrna)
-        cdf = pd.DataFrame.from_dict(cds)
+        """
+cds XP_026238700.1 1401967516 1401967635 100 100 - 204
+mrna XP_026248570.1 SUPER_3H1 531341254 531595863 100 100 + 1102 -1
+cds XP_026248570.1 531341254 531341334 100 100 + 134
+        """
+        mthick = 4
+        cdthick = 50
+        for i, rows in enumerate(gffdata):
+            if rows[0].lower() == "mrna":
+                (kind, targ,  contig, startp, endp, y1, y2, strand, score) = rows[:10]
+                startp = int(startp)
+                endp = int(endp)
+                y1 = int(y1)
+                y2 = int(y2)
+                colr = "black"
+                segs["target"].append(targ)
+                segs["x1"].append(startp)
+                segs["x2"].append(endp)
+                segs["y1"].append(y1)
+                segs["y2"].append(y2)
+                segs["colour"].append(colr)
+                segs["thickness"].append(mthick)
+                segs["alpha"].append(1.0)
+                #segs["stopc"].append(stopc)
+            elif rows[0].lower() == "cds": #  f"cds {targ} {con} {startp} {endp} {y} {y} {strand} {score}\n"
+                (kind, targ, contig, startp, endp , y1, y2, strand, score) = rows[:10]
+                startp = int(startp)
+                endp = int(endp)
+                y = int(y1)
+                colr = "blue"
+                if strand == "-":
+                    colr = "maroon"        
+                segs["target"].append(targ)
+                segs["x1"].append(startp)
+                segs["x2"].append(endp)
+                segs["y1"].append(y)
+                segs["y2"].append(y)
+                segs["colour"].append(colr)
+                segs["thickness"].append(cdthick)
+                segs["alpha"].append(0.5)
+        xmin = min(segs["x1"])
+        xmax = max(segs["x2"])
+        ymin = min(segs["y1"])
+        ymax = max(segs["y1"])
         title = " ".join(metadata["title"])
         haps = []
         print("GFF rows read =", len(gffdata))
         h1starts = []
         h1names = []
+        qtic1 = []
         for i, hap in enumerate(hapsread.keys()):
             haps.append(hap)
             for j, contig in enumerate(hapsread[hap]["cn"]):
                 cstart = hapsread[hap]["startpos"][j]
                 h1starts.append(cstart)
                 h1names.append(contig)
+                qtic1.append((cstart, contig))
         hap = haps[0]
-        print("h1names=", h1names[:20])
+        # print("h1names=", h1names[:20])
         # qtic1 = [(hqstarts[hap][x], x) for x in hqstarts[hap].keys()]
-        qtic1 = [(h1starts[i], h1names[i]) for i in range(len(h1starts))]
-        print("qtic1=", qtic1[:20])
-        taps = hv.streams.Tap(x=0, y=0)
-        showloc = pn.bind(showX, x=taps.param.x, y=taps.param.y)
-        # to rotate so the diagonal becomes the x axis
-        # xcis1r, ycis1r = rotatecoords(xcis1, ycis1, radians=0.7853981633974483, origin=(max(xcis1),max(ycis1)))
-        # pafxycis1 = pd.DataFrame(np.vstack([xcis1r,ycis1r]).T, columns = ['x', 'y'])
-        # bisect.bisect_left(a, x, lo=0, hi=len(a), *, key=None)
-        # prepare and show the 3 plots
-        # points = [(50*i, 100+random.random()) for i in range(10000)]
-        # hv.Curve(points).opts(interpolation='steps-post').opts(width=1000)
-        bigw = pn.pane.HoloViews(
-            decimate(hv.Curve(pafxy), streams=[taps])
-            .opts(interpolation="steps-pre", color="darkblue")
-            .relabel("%s" % title)
-            .opts(
-                width=pwidth,
-                height=300,
-                xticks=qtic1,
-                xrotation=45,
-                fontsize={"xticks": 8, "yticks": 10},
-                scalebar=True,
-                scalebar_range="x",
-                scalebar_location="top_left",
-                scalebar_unit=("bp"),
-                show_grid=True,
-                ylim=(-0.1, 200),
-                tools=[
-                    "xwheel_zoom",
-                    "tap",
-                    "xpan",
-                    "reset",
-                ],
-                default_tools=[],
-                active_tools=["xwheel_zoom", "tap", "pan"],
+        # print("qtic1=", qtic1[:20])
+        gffp = hv.Segments(
+            segs, ['x1', 'y1', 'x2', 'y2'], vdims=["target", "colour", "thickness", "alpha"]
             )
-        )
 
-        p1 = pn.Column(showloc, bigw)
+        gffp.opts(color="colour",
+            line_width="thickness",
+            alpha="alpha",
+            width=pwidth,
+            height=300,
+            xticks=qtic1,
+            xrotation=45,
+            fontsize={"xticks": 8, "yticks": 10},
+            show_grid=True,
+            #ylim=(50 , 105),
+            tools=[
+                "xwheel_zoom",
+                "box_zoom",
+                "tap",
+                "xpan",
+                "reset",
+            ],
+            default_tools=[],
+            active_tools=["xwheel_zoom", "tap", "xpan"],
+            )
+        apply_when(gffp, operation=datashade, predicate=lambda x: x > 1000)
 
-        return p1, title
+        taps = hv.streams.Tap(source=gffp, x=0, y=0)
+        showloc = pn.bind(showX, x=taps.param.x, y=taps.param.y)
+        gp = pn.pane.HoloViews(gffp)
+        p = pn.Column(showloc, gp)
 
-
-def getHap(contig):
-    """
-    function to return suffix H1 from chrH1 - adjust to suit.
-    """
-    return contig[-2:]
+        return p, title
 
 
 parser = argparse.ArgumentParser(description="", epilog="")
@@ -588,10 +612,12 @@ for i, infile in enumerate(args.inFile):
     print("Infile = ", infile)
     if "bw.hseq.gz" in infile:
         p1, title = hsm.makeBWPanel(infile, pwidth)
+    elif "gff.hseq.gz" in infile:
+        p1, title = hsm.makeGFFPanel(infile, pwidth)
     else:
         p1, title = hsm.makePafPanel(infile, pwidth)
     if i == 0:
         outp = p1
     else:
         outp = outp + p1
-pn.panel(outp).servable(title=title)
+pn.Row(outp).servable(title=title)
