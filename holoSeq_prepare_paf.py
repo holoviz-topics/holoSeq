@@ -83,15 +83,22 @@ def getContigs(lenFile):
     # whitespace delimited contig names and lengths.
     contigs = []
     seen = {}
+    haps = []
     with open(lenFile) as lf:
         for i, row in enumerate(lf):
-            c, clen = row.split()[:2]
-            if seen.get(c, None):
-                log.debug("Contig %s seen again at row %d of %s" % (c, i, lenFile))
-            else:
-                seen[c] = c
-                contigs.append((c, int(clen)))
-    return contigs
+            row = [x.strip() for x in row.strip().split()]
+            if len(row) > 1:
+                c, clen = row[:2]
+                if seen.get(c, None):
+                    log.debug("Contig %s seen again at row %d of %s" % (c, i, lenFile))
+                else:
+                    seen[c] = c
+                    contigs.append((c, int(clen)))
+                h = getHap(c)
+                if not h in haps:
+                    haps.append(h)
+    return contigs, haps
+
 
 def VGPsortfunc(s1, s2):
     """
@@ -104,13 +111,15 @@ def VGPsortfunc(s1, s2):
     #     ^([^_]+)_([^_]+)_unloc_(\S+)H[12]{1}$ gives super aa x for super_aa_unloc_XH2
     """
 
-    ss1 = re.compile(r'^([^_]+)_(\S+)H[12]{1}$') # should match VGP non-unloc - super/chr/scaffold. Always uppercase at entry.
-    ss2 = re.compile(r'^([^_]+)_([^_]+)_UNLOC_(\S+)H[12]{1}$') # for the unloc
+    ss1 = re.compile(
+        r"^([^_]+)_(\S+)H[12]{1}$"
+    )  # should match VGP non-unloc - super/chr/scaffold. Always uppercase at entry.
+    ss2 = re.compile(r"^([^_]+)_([^_]+)_UNLOC_(\S+)H[12]{1}$")  # for the unloc
 
     def intOrd(n):
         "x, y, z, w typically sex chromosomes - there be some weird beasts"
         if n:
-            n = n.replace('_','').replace('chr', '') # in case chr_aa or something
+            n = n.replace("_", "").replace("chr", "")  # in case chr_aa or something
             if n.isdigit():
                 return int(n)
             else:
@@ -133,25 +142,24 @@ def VGPsortfunc(s1, s2):
         n2 = intOrd(n2)
         return c1, n1, n2
 
-            
     if s1[0] == s2[0]:  # simplest case - same contig, sort on offset
         return s1[1] - s2[1]  # neg if left sorts before
-    else: # deal with chr - assume no dashes?
-        if 'chr' in s1[0].lower():
-            if 'chr' in s2[0].lower(): # punt for chr22H2 or so 
+    else:  # deal with chr - assume no dashes?
+        if "chr" in s1[0].lower():
+            if "chr" in s2[0].lower():  # punt for chr22H2 or so
                 n1 = intOrd(s1[0].lower())
                 n2 = intOrd(s2[0].lower())
                 return n1 - n2
             else:
-                return -1 # put chr first
-        elif 'chr' in s2[0].lower():
+                return -1  # put chr first
+        elif "chr" in s2[0].lower():
             return 1
     u1 = "unloc" in s1[0].lower()
     u2 = "unloc" in s2[0].lower()
     if u1 and not u2:
-        return 1 # u1 unloc goes after
+        return 1  # u1 unloc goes after
     elif u2 and not u1:
-        return -1 # u1 goes before unloc
+        return -1  # u1 goes before unloc
     isSuper1 = (not u1) and (("super" in s1[0].lower()))
     isSuper2 = (not u2) and (("super" in s2[0].lower()))
     isScaff1 = (not u1) and (("scaffold" in s1[0].lower()))
@@ -161,16 +169,18 @@ def VGPsortfunc(s1, s2):
     elif isSuper2 and not isSuper1:
         return 1
     # Must parse
-    
+
     c1, naa, nab = matchme(s1[0].upper())
     c2, nba, nbb = matchme(s2[0].upper())
     if not c1 or not c2:
-        log.debug('no match for ss1 %s and/or ss2 %s' % (ss1, ss2))
+        log.debug("no match for ss1 %s and/or ss2 %s" % (ss1, ss2))
         return 0
     else:
-        if isSuper1 or (isScaff1 and isScaff2): # if a super must both be supers or if both are scaffolds
+        if isSuper1 or (
+            isScaff1 and isScaff2
+        ):  # if a super must both be supers or if both are scaffolds
             return naa - nba
-        else: # must both be unlocs
+        else:  # must both be unlocs
             if naa == nba:
                 return nab - nbb
             else:
@@ -194,8 +204,8 @@ def contsort(contigs, args):
     clens = [x[1] for x in contigs]
     cnames = [x[0] for x in contigs]
     cstarts = list(itertools.accumulate(clens))
-    cstarts.insert(0,0) # first one starts at 0
-    scont = OrderedDict(zip(cnames,cstarts))
+    cstarts.insert(0, 0)  # first one starts at 0
+    scont = OrderedDict(zip(cnames, cstarts))
     return scont
 
 
@@ -214,14 +224,16 @@ class gffConvert:
         comment = "#"
         self.hsId = "@v1HoloSeq1D"
         self.inFname = gff
-        print('contigs=', str(contigs)[:1000])
+        print("contigs=", str(contigs)[:1000])
         with open(gff) as g:
             for i, row in enumerate(g):
                 if not row.startswith(comment):
-                    (id, name, kind, startp, endp, score, strand, phase, text) = [x.strip() for x in row.split()[:9]]
-                    if not segs.get(id,None):
+                    (id, name, kind, startp, endp, score, strand, phase, text) = [
+                        x.strip() for x in row.split()[:9]
+                    ]
+                    if not segs.get(id, None):
                         segs[id] = []
-                    if kind.lower() in ['cds', 'mrna']:
+                    if kind.lower() in ["cds", "mrna"]:
                         anno = text.split(";")
                         tanno = [
                             x.strip()[7:]
@@ -238,7 +250,7 @@ class gffConvert:
                     if offset < 0:
                         print(
                             "Ignored gff3 id %s missing from supplied xcontigs, in row %d %s of %s with addH1=%s"
-                            % (id, i,row, gff, args.addH1)
+                            % (id, i, row, gff, args.addH1)
                         )
                     else:
                         if kind.lower() == "mrna":
@@ -257,15 +269,24 @@ class gffConvert:
                                         strand,
                                         score,
                                         target,
-                                        "mrna"
+                                        "mrna",
                                     )
                                 )
                             else:
                                 print("no target found in %s at row %d" % (text, i))
-                        elif kind.lower() == "stop_codon" :
+                        elif kind.lower() == "stop_codon":
                             segs[id].append((startp + offset, target, "stopc"))
                         elif kind.lower() == "cds":
-                            segs[id].append((startp + offset, endp + offset, strand, score, target, "cds"))
+                            segs[id].append(
+                                (
+                                    startp + offset,
+                                    endp + offset,
+                                    strand,
+                                    score,
+                                    target,
+                                    "cds",
+                                )
+                            )
 
         self.export_mapping(outFname, contigs, segs, args)
 
@@ -300,6 +321,7 @@ class gffConvert:
             if x1 == x2 or y1 == y2:
                 return False
             return x1 <= y2 and y1 <= x2
+
         hdr = prepHeader(contigs, args)
 
         with gzip.open(outFname, mode="wb") as ofn:
@@ -320,7 +342,7 @@ class gffConvert:
                                 y = 100
                                 lastseg = (targ, startp, endp)
                             row = str.encode(
-                            f"mrna {targ} {con} {startp} {endp} {y} {y} {strand} {score}\n"
+                                f"mrna {targ} {con} {startp} {endp} {y} {y} {strand} {score}\n"
                             )
                             ofn.write(row)
                         elif kind == "cds":
@@ -331,9 +353,7 @@ class gffConvert:
                             ofn.write(row)
                         elif kind == "stopc":
                             (startp, targ, _) = m
-                            row = str.encode(
-                                f"stopc {targ} {con} {startp}\n"
-                            )
+                            row = str.encode(f"stopc {targ} {con} {startp}\n")
                             ofn.write(row)
 
 
@@ -426,17 +446,17 @@ class pafConvert:
     python holoSeq_prepare_paf.py --inFile mUroPar1H1H2.paf --xclenfile mUroPar1H1suffix.len --yclenfile mUroPar1H2suffix.len --contig_sort VGPname --hap_indicator Suffix
     """
 
-    def __init__(self, inFname, args, xcontigs, ycontigs):
+    def __init__(self, inFname, args, xcontigs, ycontigs, haps):
         self.inFname = inFname
         # have the axes set up so prepare the three plot x/y vectors
         # for a second pass to calculate all the coordinates.
-        # adding tooltips just does not scale so abando - see the tooltip old version
-        cis1 = {"x": [], "y": []}
-        cis2 = {"x": [], "y": []}
-        trans1 = {"x": [], "y": []}
-        haps = []
+        # adding tooltips just does not scale so abandoned - see the tooltip old version
         rowi = 0
+        ncis1 = ncis2 = ntrans = 0
         # print('ycon %s' % (ycontigs))
+        hsId = holoSeqHeaders[1]
+        self.inFname = inFname
+        self.prepPafGZ(hsId, haps, xcontigs, ycontigs, args)
         with open(inFname) as f:
             for rowi, rows in enumerate(f):
                 row = rows.strip().split()
@@ -446,88 +466,46 @@ class pafConvert:
                     n1 = int(row[2])
                     n2 = int(row[7])
                     H1 = getHap(c1)
-                    if rowi == 0:
-                        haps.append(H1)
                     H2 = getHap(c2)
-                    if H2 not in haps:
-                        haps.append(H2)
                     if H1 != H2:  # trans
                         if H1 == haps[0]:  # x is h1 for trans - otherwise ignore
                             xstart = xcontigs[c1]
                             ystart = ycontigs[c2]
-                            trans1["x"].append(xstart + n1)
-                            trans1["y"].append(ystart + n2)
+                            row = str.encode("%d %d\n" % (xstart + n1, ystart + n2))
+                            self.transf.write(row)
+                            ntrans += 1
                         else:
                             xstart = xcontigs[c2]
                             ystart = ycontigs[c1]
-                            trans1["y"].append(ystart + n1)
-                            trans1["x"].append(xstart + n2)
+                            row = str.encode("%d %d\n" % (xstart + n2, ystart + n1))
+                            self.transf.write(row)
+                            ntrans += 1
                     else:  # cis
                         if H1 == haps[0]:
                             xstart = xcontigs[c1]
                             ystart = xcontigs[c2]
-                            cis1["x"].append(xstart + n1)
-                            cis1["y"].append(ystart + n2)
+                            row = str.encode("%d %d\n" % (xstart + n1, ystart + n2))
+                            self.cis1f.write(row)
+                            ncis1 += 1
                         else:
                             xstart = ycontigs[c1]
                             ystart = ycontigs[c2]
-                            cis2["x"].append(xstart + n1)
-                            cis2["y"].append(ystart + n2)
-        print("ncis1=", len(cis1["x"]))
-        print("ncis2=", len(cis2["x"]))
-        if (len(cis1["x"])) > 0:
-            hap = haps[0]
-            ofn = "%s_cis%s_hseq.gz" % (inFname, hap)
-            self.export_mapping(
-                holoSeqHeaders[1],
-                ofn,
-                haps,
-                xcontigs,
-                ycontigs,
-                cis1["x"],
-                cis1["y"],
-                [],
-                args,
-            )
-        if (len(cis2["x"])) > 0:
-            hap = haps[1]
-            ofn = "%s_cis%s_hseq.gz" % (inFname, hap)
-            hap = haps[1]
-            self.export_mapping(
-                holoSeqHeaders[1],
-                ofn,
-                haps,
-                ycontigs,
-                ycontigs,
-                cis2["x"],
-                cis2["y"],
-                [],
-                args,
-            )
-        if (len(trans1["x"])) > 0:
-            ofn = "%s_trans_hseq.gz" % (inFname)
-            self.export_mapping(
-                holoSeqHeaders[1],
-                ofn,
-                haps,
-                xcontigs,
-                ycontigs,
-                trans1["x"],
-                trans1["y"],
-                [],
-                args,
-            )
+                            row = str.encode("%d %d\n" % (xstart + n1, ystart + n2))
+                            self.cis2f.write(row)
+                            ncis2 += 1
+        self.cis1f.close()
+        self.cis2f.close()
+        self.transf.close()
+        print("ncis1=%d, ncis2=%d, ntrans=%d" % (ncis1, ncis2, ntrans))
 
-    def export_mapping(
-        self, hsId, outFname, haps, xcontigs, ycontigs, x, y, anno, args
-    ):
+    def prepPafGZ(self, hsId, haps, xcontigs, ycontigs, args):
         """
         @v1HoloSeq2D for example
         """
 
-        def prepHeader(haps, hsId, xcontigs, ycontigs, args):
+        def prepHeader(haps, hsId, xcontigs, ycontigs, args, outf):
             """
-            holoSeq output format
+            holoSeq output format - prepare gzip output channels
             """
             h = ["@%s %s %d" % (getHap(k), k, xcontigs[k]) for k in xcontigs.keys()]
             if len(haps) > 1:
@@ -545,20 +523,15 @@ class pafConvert:
                 "@@yclenfile %s" % args.yclenfile,
             ]
 
-            return metah + h
+            outs = "\n".join(metah + h) + "\n"
+            outf.write(str.encode(outs))
 
-        hdr = prepHeader(haps, hsId, xcontigs, ycontigs, args)
-
-        with gzip.open(outFname, mode="wb") as ofn:
-            ofn.write(str.encode("\n".join(hdr) + "\n"))
-            if len(anno) == len(x):
-                for i in range(len(x)):
-                    row = str.encode("%d %d %s\n" % (x[i], y[i], anno[i]))
-                    ofn.write(row)
-            else:
-                for i in range(len(x)):
-                    row = str.encode("%d %d\n" % (x[i], y[i]))
-                    ofn.write(row)
+        self.cis1f = gzip.open("%s_cis%s_hseq.gz" % (self.inFname, haps[0]), mode="wb")
+        prepHeader(haps[0], hsId, xcontigs, ycontigs, args, self.cis1f)
+        self.cis2f = gzip.open("%s_cis%s_hseq.gz" % (self.inFname, haps[1]), mode="wb")
+        prepHeader(haps[1], hsId, xcontigs, ycontigs, args, self.cis2f)
+        self.transf = gzip.open("%s_trans_hseq.gz" % (self.inFname), mode="wb")
+        prepHeader(haps, hsId, xcontigs, ycontigs, args, self.transf)
 
 
 if __name__ == "__main__":
@@ -603,24 +576,29 @@ if __name__ == "__main__":
     )
     parser.add_argument("--version", "-V", action="version", version="0.1")
     args = parser.parse_args()
-    xcontigs = getContigs(args.xclenfile)
+    haps = []
+    yhaps = []
+    xcontigs, xhaps = getContigs(args.xclenfile)
     sxcontigs = contsort(xcontigs, args)
     if args.yclenfile:
-        ycontigs = getContigs(args.yclenfile)
+        ycontigs, yhaps = getContigs(args.yclenfile)
         sycontigs = contsort(ycontigs, args)
     else:
         sycontigs = sxcontigs
+    for h in xhaps + yhaps:
+        if not h in haps:
+            haps.append(h)
     for f in args.inFile:
         ps = Path(f).suffix.lower()
         print("inFile=", f, ps)
 
         if ps == ".paf":
-            p = pafConvert(f, args, sxcontigs, sycontigs)
+            p = pafConvert(f, args, sxcontigs, sycontigs, haps)
         elif ps in [".bw", ".bigwig"]:
             outf = "%s.hseq.gz" % f
             p = bwConvert(f, outf, args, sxcontigs)
         elif ps in [".gff3", ".gff"]:
             outf = "%s.hseq.gz" % f
-            p = gffConvert(f, outf, sxcontigs, args) 
+            p = gffConvert(f, outf, sxcontigs, args)
         else:
             print(f, "unknown type - cannot process")
