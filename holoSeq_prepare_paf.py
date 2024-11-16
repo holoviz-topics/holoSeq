@@ -4,7 +4,9 @@
 # panel serve holoseq_display.py --show --args --inFile mUroPar1H1H2.paf_cisH1_hseq.gz mUroPar1H1H2.paf_cisH2_hseq.gz mUroPar1H1H2.paf_trans_hseq.gz  --size 1000
 #
 # python holoSeq_prepare_paf.py --inFile mUroPar1_protH1.gff --xclenfile mUroPar1H1suffix.len --contig_sort VGPname --title "mUroPar1 NCBI protein GFF"
-
+#
+# python holoSeq_prepare_paf.py --inFile ../hg002_bothHiC.paf --xclenfile hg002H1_suffixed.len --yclenfile hg002H2_suffixed.len --contig_sort VGPname --hap_indicator Suffix --title "T2T HG002 HiC data"
+#
 # Proof of cocept data are Arima HiC reads from the Arctic Ground Squirrel mUroPar1 VGP genomeArk repository
 # processed with Dephine's Pretext workflow using Bellerophon to remove chimeric reads
 # The paired bam output is converted to PAF with an awk script (!) and that's what is read
@@ -29,6 +31,7 @@ from functools import cmp_to_key
 from pathlib import Path
 
 import gzip
+import io
 import itertools
 import logging
 import math
@@ -39,7 +42,7 @@ import os
 import pybigtools
 
 logging.basicConfig(level=logging.DEBUG)
-log = logging.getLogger("holoseq_display")
+log = logging.getLogger("holoseq_prepare")
 
 # inFile = "galaxy_inputs/paf/bothmap.paf.tab.tabular"
 inFile = "/home/ross/rossgit/holoviews-examples/huge.paf"
@@ -110,7 +113,8 @@ def VGPsortfunc(s1, s2):
     # ^([^_]+)_(\S+)H[12]{1}$ gives group1 SUPER or Scaffold and group2 X or 22
     #     ^([^_]+)_([^_]+)_unloc_(\S+)H[12]{1}$ gives super aa x for super_aa_unloc_XH2
     """
-
+    ssc = re.compile("^(CHR)_*(\d+|[a-zA-Z0-9]+)_*(\S*)$")
+    # should match chrY or chr_y_paternal or chr333
     ss1 = re.compile(
         r"^([^_]+)_(\S+)H[12]{1}$"
     )  # should match VGP non-unloc - super/chr/scaffold. Always uppercase at entry.
@@ -128,42 +132,44 @@ def VGPsortfunc(s1, s2):
             return None
 
     def matchme(s):
-        found = ss2.search(s)
+        c1 = n1 = n2 = None
+        found = ssc.search(s)
         if found:
             c1, n1, n2 = found.groups()[:3]
         else:
-            found = ss1.search(s)
+            found = ss2.search(s)
             if found:
-                c1, n1 = found.groups()[:2]
-                n2 = None
+                c1, n1, n2 = found.groups()[:3]
             else:
-                c1 = n1 = n2 = None
-        n1 = intOrd(n1)
-        n2 = intOrd(n2)
+                found = ss1.search(s)
+                if found:
+                    c1, n1 = found.groups()[:2]
+                    n2 = None
+        if n1.isdigit():
+            n1 = int(n1)
+        else:
+            n1 = ord(n1[0])
+        if n2:
+            if n2.isdigit():
+                n2 = int(n2)
+            else:
+                n2 = ord(n2[0])
         return c1, n1, n2
 
+    s1 = [s1[0].upper(), s1[1]]
+    s2= [s2[0].upper(), s2[1]]
     if s1[0] == s2[0]:  # simplest case - same contig, sort on offset
         return s1[1] - s2[1]  # neg if left sorts before
-    else:  # deal with chr - assume no dashes?
-        if "chr" in s1[0].lower():
-            if "chr" in s2[0].lower():  # punt for chr22H2 or so
-                n1 = intOrd(s1[0].lower())
-                n2 = intOrd(s2[0].lower())
-                return n1 - n2
-            else:
-                return -1  # put chr first
-        elif "chr" in s2[0].lower():
-            return 1
-    u1 = "unloc" in s1[0].lower()
-    u2 = "unloc" in s2[0].lower()
+    u1 = "UNLOC" in s1[0]
+    u2 = "UNLOC" in s2[0]
     if u1 and not u2:
         return 1  # u1 unloc goes after
     elif u2 and not u1:
         return -1  # u1 goes before unloc
-    isSuper1 = (not u1) and (("super" in s1[0].lower()))
-    isSuper2 = (not u2) and (("super" in s2[0].lower()))
-    isScaff1 = (not u1) and (("scaffold" in s1[0].lower()))
-    isScaff2 = (not u2) and (("scaffold" in s2[0].lower()))
+    isSuper1 = (not u1) and (("SUPER" in s1[0]) or ("CHR" in s1[0]))
+    isSuper2 = (not u2) and (("SUPER" in s2[0]) or ("CHR" in s2[0]))
+    isScaff1 = (not u1) and (("SCAFFOLD" in s1[0]))
+    isScaff2 = (not u2) and (("SCAFFOLD" in s2[0]))
     if isSuper1 and not isSuper2:
         return -1
     elif isSuper2 and not isSuper1:
@@ -219,12 +225,11 @@ class gffConvert:
 
     def __init__(self, gff, outFname, contigs, args):
         mrnaseen = {}
-        stopcodons = {}
         segs = {}
         comment = "#"
         self.hsId = "@v1HoloSeq1D"
         self.inFname = gff
-        print("contigs=", str(contigs)[:1000])
+        log.debug("contigs=%s" % str(contigs)[:1000])
         with open(gff) as g:
             for i, row in enumerate(g):
                 if not row.startswith(comment):
@@ -248,7 +253,7 @@ class gffConvert:
                         offset = contigs.get(id + "H1", -1)
                         id = id + "H1"
                     if offset < 0:
-                        print(
+                        log.warn(
                             "Ignored gff3 id %s missing from supplied xcontigs, in row %d %s of %s with addH1=%s"
                             % (id, i, row, gff, args.addH1)
                         )
@@ -256,7 +261,7 @@ class gffConvert:
                         if kind.lower() == "mrna":
                             if target:
                                 if mrnaseen.get(target, None):
-                                    print(
+                                    log.debug(
                                         "Seeing mrna target %s again at row %d"
                                         % (target, i)
                                     )
@@ -273,7 +278,7 @@ class gffConvert:
                                     )
                                 )
                             else:
-                                print("no target found in %s at row %d" % (text, i))
+                                log.warn("no target found in %s at row %d" % (text, i))
                         elif kind.lower() == "stop_codon":
                             segs[id].append((startp + offset, target, "stopc"))
                         elif kind.lower() == "cds":
@@ -391,7 +396,7 @@ class bwConvert:
                 bw = bwf.records(bchr)
                 data[cchr]["xval"] = [x[2] for x in bw]
             else:
-                print(
+                log.warn(
                     "Bigwig contig %s not found in supplied X axis lengths file" % cchr
                 )
         self.export_mapping(outFname, contigs, data, args)
@@ -409,7 +414,8 @@ class bwConvert:
             h = ["@%s %s %d" % (getHap(k), k, contigs[k]) for k in contigs.keys()]
             metah = [
                 self.hsId,
-                "@@bigwig" "@@title %s" % args.title,
+                "@@bigwig 1",
+                "@@title %s" % args.title,
                 "@@datasource %s" % "bigwig",
                 "@@datafile %s" % self.inFname,
                 "@@refURI %s" % args.refURI,
@@ -432,6 +438,9 @@ class bwConvert:
 
 class pafConvert:
     """
+    updated to stream row at a time -
+    slower but no room for the entire output if the input is 60GB+
+
     paf to xy and axis metadata
     Assumes pairs of points representing HiC contact pairs, or Mashmap sequence similarity hits. HiC data typically comes from pairs of haplotypes and is used to help assemble all
     the contigs into chromosomes
@@ -496,14 +505,14 @@ class pafConvert:
         self.cis1f.close()
         self.cis2f.close()
         self.transf.close()
-        print("ncis1=%d, ncis2=%d, ntrans=%d" % (ncis1, ncis2, ntrans))
+        log.debug("ncis1=%d, ncis2=%d, ntrans=%d" % (ncis1, ncis2, ntrans))
 
     def prepPafGZ(self, hsId, haps, xcontigs, ycontigs, args):
         """
         @v1HoloSeq2D for example
         """
 
-        def prepHeader(haps, hsId, xcontigs, ycontigs, args, outf):
+        def prepHeader(haps, hsId, xcontigs, ycontigs, args, outf, subtitle):
             """
             holoSeq output format - prepare gzip output channels
             """
@@ -515,7 +524,7 @@ class pafConvert:
             metah = [
                 hsId,
                 "@@heatmap",
-                "@@title %s" % args.title,
+                "@@title %s" % args.title + subtitle,
                 "@@datasource %s" % "bigwig",
                 "@@datafile %s" % self.inFname,
                 "@@refURI %s" % args.refURI,
@@ -526,12 +535,39 @@ class pafConvert:
             outs = "\n".join(metah + h) + "\n"
             outf.write(str.encode(outs))
 
-        self.cis1f = gzip.open("%s_cis%s_hseq.gz" % (self.inFname, haps[0]), mode="wb")
-        prepHeader(haps[0], hsId, xcontigs, ycontigs, args, self.cis1f)
-        self.cis2f = gzip.open("%s_cis%s_hseq.gz" % (self.inFname, haps[1]), mode="wb")
-        prepHeader(haps[1], hsId, xcontigs, ycontigs, args, self.cis2f)
-        self.transf = gzip.open("%s_trans_hseq.gz" % (self.inFname), mode="wb")
-        prepHeader(haps, hsId, xcontigs, ycontigs, args, self.transf)
+        f1 = gzip.open("%s_cis%s_hseq.gz" % (self.inFname, haps[0]), mode="wb")
+        self.cis1f = io.BufferedWriter(f1, buffer_size=1024 * 1024)
+        prepHeader(
+            haps[0],
+            hsId,
+            xcontigs,
+            ycontigs,
+            args,
+            self.cis1f,
+            " Pairs on %s" % haps[0],
+        )
+        f2 = gzip.open("%s_cis%s_hseq.gz" % (self.inFname, haps[1]), mode="wb")
+        self.cis2f = io.BufferedWriter(f2, buffer_size=1024 * 1024)
+        prepHeader(
+            haps[1],
+            hsId,
+            xcontigs,
+            ycontigs,
+            args,
+            self.cis2f,
+            " Pairs on %s" % haps[1],
+        )
+        f3 = gzip.open("%s_trans_hseq.gz" % (self.inFname), mode="wb")
+        self.transf = io.BufferedWriter(f3, buffer_size=1024 * 1024)
+        prepHeader(
+            haps,
+            hsId,
+            xcontigs,
+            ycontigs,
+            args,
+            self.transf,
+            " Pairs on different haplotypes",
+        )
 
 
 if __name__ == "__main__":
@@ -586,11 +622,11 @@ if __name__ == "__main__":
     else:
         sycontigs = sxcontigs
     for h in xhaps + yhaps:
-        if not h in haps:
+        if h not in haps:
             haps.append(h)
     for f in args.inFile:
         ps = Path(f).suffix.lower()
-        print("inFile=", f, ps)
+        log.debug("inFile=%s, ftype = %s" % (f, ps))
 
         if ps == ".paf":
             p = pafConvert(f, args, sxcontigs, sycontigs, haps)
@@ -601,4 +637,5 @@ if __name__ == "__main__":
             outf = "%s.hseq.gz" % f
             p = gffConvert(f, outf, sxcontigs, args)
         else:
-            print(f, "unknown type - cannot process")
+            log.warn("%s unknown type - cannot process" % ps)
+    logging.shutdown()

@@ -1,6 +1,7 @@
 # see https://github.com/fubar2/holoSeq
 # pip install datashader dask[dataframe] holoviews[recommended] pandas matplotlib bokeh
 #
+# panel serve --address 0.0.0.0 --port 8080 --show --session-token-expiration 9999999 --args --inFile ../hg002_bothHiC.paf_cisH1_hseq.gz 
 # This is a generic plot re-creator for holoSeq hseq compressed coordinate data.
 # It presents interactive plots at scale using panel.
 # Plot coordinates and axis metadata are prepared from genomic data such as PAF or bigwig files,
@@ -95,16 +96,12 @@ class holoSeq_maker:
         with gzip.open(inFile, "rt") as f:
             for i, trow in enumerate(f):
                 if i == 0:
-                    hseqformat = trow.split()[0].strip()
+                    hseqformat = trow.split()[0]
                     if hseqformat not in holoSeqHeaders:
-                        print(
-                            "Supplied input",
-                            inFile,
-                            "has a first row =",
-                            trow,
-                            "so is not a valid holoSeq input file",
+                        log.warn(
+                            f"Supplied input {inFile} has first row {trow} so is not a valid holoSeq input file"
                         )
-                        print("First row must start with one of these:", holoSeqHeaders)
+                        log.warn("First row must start with one of these:%s" % holoSeqHeaders)
                         return
                     hsDims = holoSeqHeaders.index(hseqformat) + 1
                     if hsDims == 1:
@@ -130,50 +127,28 @@ class holoSeq_maker:
                                 haps[hap]["cn"].append(cname.strip())
                                 haps[hap]["startpos"].append(int(cstart.strip()))
                             else:
-                                print(
-                                    "Supplied input",
-                                    inFile,
-                                    "at row",
-                                    i,
-                                    "=",
-                                    row,
-                                    "lacking the required reference name, contig name and contig length. Not a valid holoSeq input file",
-                                )
+                                log.warn(f"Supplied input {inFile} at row {i} = {row} lacks reference name, contig name and contig length. Not a valid holoSeq input file")
                                 return
                         else:
                             if len(srow) >= 2:
                                 hap, cname, cstart = srow[:3]
                                 if not haps.get(hap, None):
-                                    print("adding hap", hap)
+                                    log.debug("adding hap %s" % hap)
                                     hh.append(hap)
                                     haps[hap] = {"cn": [], "startpos": []}
-                                haps[hap]["cn"].append(cname.strip())
-                                haps[hap]["startpos"].append(int(cstart.strip()))
+                                haps[hap]["cn"].append(cname)
+                                haps[hap]["startpos"].append(int(cstart))
                             else:
-                                print(
-                                    "Supplied input",
-                                    inFile,
-                                    "at row",
-                                    i,
-                                    "=",
-                                    row,
-                                    "lacking the required reference name, contig name and contig length. Not a valid holoSeq input file",
-                                )
+                                log.warn(
+                                    f"Supplied input {inFile} at row {i} = {row} lacks reference name, contig name and contig length. Not a valid holoSeq input file")
                                 return
                 else:  # not header row
-                    srow = [x.strip() for x in trow.strip().split()]
+                    srow = trow.split()
                     lrow = len(srow)
                     if hsDims == 2:
                         if lrow < 2:
-                            print(
-                                "At row",
-                                i,
-                                "Supplied 2D input",
-                                inFile,
-                                "has",
-                                trow,
-                                "which does not parse into x and ycoordinates and optional annotation",
-                            )
+                            log.warn(
+                                    f"Supplied 2D input {inFile} at row {i} = {trow} - needs at least two coordinates to be a valid holoSeq input file")
                             return
                         else:
                             if srow[0].isdigit() and srow[1].isdigit():
@@ -182,15 +157,8 @@ class holoSeq_maker:
                                 if lrow > 2:
                                     annos.append(srow[2:])
                             else:
-                                print(
-                                    "At row",
-                                    i,
-                                    "Supplied 2D input",
-                                    inFile,
-                                    "has",
-                                    trow,
-                                    "which does not parse into x and ycoordinates and optional annotation",
-                                )
+                                log.warn(
+                                    f"Supplied 2D input {inFile} at row {i} = {trow} - needs at least two integer coordinates to be a valid holoSeq input file")
                                 return
                     else:
                         if isGFF:
@@ -206,15 +174,8 @@ class holoSeq_maker:
                                 if lrow > 2:
                                     annos.append(srow[2:])
                             else:
-                                print(
-                                    "At row",
-                                    i,
-                                    "Supplied 1D input",
-                                    inFile,
-                                    "has",
-                                    trow,
-                                    "which does not parse into x coordinate and optional annotation",
-                                )
+                                log.warn(
+                                    f"Supplied 1D input {inFile} at row {i} = {trow} - needs at least one integer coordinate to be a valid holoSeq input file")
                                 return
 
         return (hsDims, haps, xcoords, ycoords, annos, plotType, metadata, gffdata)
@@ -341,6 +302,7 @@ class holoSeq_maker:
         pafxy = pd.DataFrame.from_dict({xcf: xcoords, ycf: ycoords})
         pafp = hv.Points(pafxy, kdims=[xcf, ycf])
 
+        # apply_when(pafp, operation=rasterize, predicate=lambda x: len(x) > 5000)
         stream = hv.streams.Tap(x=0, y=0)
         if isTrans:
             showloc = pn.bind(showTrans, x=stream.param.x, y=stream.param.y)
@@ -418,10 +380,10 @@ class holoSeq_maker:
                 h1starts.append(cstart)
                 h1names.append(contig)
         hap = haps[0]
-        print("h1names=", h1names[:20])
+        log.debug("h1names=%s" % h1names[:20])
         # qtic1 = [(hqstarts[hap][x], x) for x in hqstarts[hap].keys()]
         qtic1 = [(h1starts[i], h1names[i]) for i in range(len(h1starts))]
-        print("qtic1=", qtic1[:20])
+        log.debug("qtic1=%s" % qtic1[:20])
         xax = metadata["xclenfile"][0]
         yax = metadata["yclenfile"][0] + "Bigwig value"
         pafxy = pd.DataFrame.from_dict({xax: xcoords, yax: ycoords})
@@ -461,9 +423,14 @@ class holoSeq_maker:
     def makeGFFPanel(self, inFile, pwidth):
         """
         prepare a complete panel for the final display
+https://www.ncbi.nlm.nih.gov/gene/?term=XP_026235740.1
 
-        html_content = plot_file.read()
-escaped_html = html.escape(html_content)
+import urllib.request
+xpuri = 'https://www.ncbi.nlm.nih.gov/gene/?term=XP_026235740.1'
+req = urllib.request.Request(xpuri)
+with urllib.request.urlopen(req) as response:
+   apage = response.read()
+escaped_html = html.escape(apage)
 
 # Create iframe embedding the escaped HTML and display it
 iframe_html = f'<iframe srcdoc="{escaped_html}" style="height:100%; width:100%" frameborder="0"></iframe>'
@@ -575,7 +542,8 @@ cds XP_026248570.1 531341254 531341334 100 100 + 134
             segs, [xcf, 'wy1', 'x2', 'y2'], vdims=["target", "colour", "thickness", "alpha"]
             )
 
-        gffp.opts(color="colour",
+        gffp.opts(title="title",
+            color="colour",
             line_width="thickness",
             alpha="alpha",
             width=pwidth,
@@ -588,7 +556,6 @@ cds XP_026248570.1 531341254 531341334 100 100 + 134
             scalebar_unit=("bp"),
             fontsize={"xticks": 8, "yticks": 10},
             show_grid=True,
-            #ylim=(50 , 105),
             autorange='y',
             tools=[
                 "xwheel_zoom",
