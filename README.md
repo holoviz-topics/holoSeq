@@ -13,15 +13,24 @@
 This is new work in progress. 
 
 Development started in late October 2024. 
-A draft framework [specification is here.](https://github.com/fubar2/holoSeq/blob/main/HoloSeqOverview.md). 
+A draft framework [description and specification is here.](https://github.com/fubar2/holoSeq/blob/main/HoloSeqOverview.md). 
 
 ## Core idea: Features on intervals arranged along linear axes for browsing
 
-This proof of concept runs in a notebook, or if the dependencies are available, can be served from
+This proof of concept shows how a tap is converted back into contig and offset, and how millions of points can be 
+plotted using rasterize and datashader. It runs in an IPythong notebook, or if the dependencies are available, can be served from
 this repository's root, as:
+
 > panel serve holoSeq_random.py --show
 
 Edit the default 10000 xmax value to get a sense of scale capacity - 10M is not a problem.
+There is very little code needed for plotting. Most of the code is needed to create some sample contigs of fixed length into some arbitrary ordering along the axes.
+Their lengths are cumulated and the resulting array represents axis offsets to the starting nucleotide of each contig,
+used for calculating the x and y coordinates for randomly generated points so the are correctly located
+in an internally consistent 2D space. 
+
+This is proposed as a generalisable model for a linear display of genomic features located on a set of independent contigs in
+holoSeq displays.
 
 ```
 # see https://github.com/fubar2/holoSeq
@@ -110,7 +119,7 @@ pnc = pn.Column(
 pnc.servable(title=title, )
 ```
 
-## Demonstration with millions of pairs from HiC data
+## Real data demonstration with millions of pairs from VGP HiC data
 
 Requires both Python and the python-venv module installed. 
 These steps ensure that the virtual environment directory can be made and deleted without any other changes to your system.

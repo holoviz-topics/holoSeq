@@ -512,7 +512,7 @@ class pafConvert:
         @v1HoloSeq2D for example
         """
 
-        def prepHeader(haps, hsId, xcontigs, ycontigs, args, outf, subtitle):
+        def prepHeader(haps, hsId, xcontigs, ycontigs, args, outf, subtitle, xclenfile, yclenfile):
             """
             holoSeq output format - prepare gzip output channels
             """
@@ -528,8 +528,8 @@ class pafConvert:
                 "@@datasource %s" % "bigwig",
                 "@@datafile %s" % self.inFname,
                 "@@refURI %s" % args.refURI,
-                "@@xclenfile %s" % args.xclenfile,
-                "@@yclenfile %s" % args.yclenfile,
+                "@@xclenfile %s" % xclenfile,
+                "@@yclenfile %s" % yclenfile,
             ]
 
             outs = "\n".join(metah + h) + "\n"
@@ -545,6 +545,8 @@ class pafConvert:
             args,
             self.cis1f,
             " Pairs on %s" % haps[0],
+            xclenfile = args.xclenfile,
+            yclenfile = args.xclenfile
         )
         f2 = gzip.open("%s_cis%s_hseq.gz" % (self.inFname, haps[1]), mode="wb")
         self.cis2f = io.BufferedWriter(f2, buffer_size=1024 * 1024)
@@ -556,6 +558,8 @@ class pafConvert:
             args,
             self.cis2f,
             " Pairs on %s" % haps[1],
+            xclenfile = args.yclenfile,
+            yclenfile = args.yclenfile
         )
         f3 = gzip.open("%s_trans_hseq.gz" % (self.inFname), mode="wb")
         self.transf = io.BufferedWriter(f3, buffer_size=1024 * 1024)
@@ -567,6 +571,8 @@ class pafConvert:
             args,
             self.transf,
             " Pairs on different haplotypes",
+            xclenfile = args.xclenfile,
+            yclenfile = args.yclenfile
         )
 
 

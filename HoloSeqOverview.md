@@ -1,75 +1,64 @@
 # HoloSeq
 
-This repository contains an application that allows large scale genomic data with tens of millions of features to be viewed interactively,
-as 1D charts or 2D heatmaps, using generic visualisation infrastructure built using the [Holoviews ecosystem](https://holoviews.org/). 
+Internally, this project uses a *precomputed mapping data format* for sequence annotation that allows large scale data to be viewed
+as 1D charts or 2D heatmaps using a generic visualisation infrastructure built using the [Holoviews ecosystem](https://holoviews.org/).
+
+Preparing the coordinates for a 60GB HiC paf file with 720 million pairs takes a couple of hours so it makes sense to save them in
+an intermediate precomputed format. Displaying the resulting 1.2GB compressed coordinates for 200M pairs only involving H1 takes about 10 minutes in comparison.
 
 The presentation layer supports genome scale feature data associated with a genomic reference or other sequence. The user can pan and zoom 
-smoothly from whole genomes down to individual points, in a web browser running on a suitable laptop or in Galaxy. At present, 2D plots can be
-made from HiC contact pairs as PAF, and from mashmap sequence similarity as PAF. Bigwig and gff format tracks can be converted into coordinates ready for 1D plotting.
+smoothly from whole genomes down to individual points, with tens of millions of rows of data, in a web browser running on a suitable laptop or in Galaxy. 
+The data format provides all the information needed for recreating a plot using the inbuilt reference sequence coordinates as axes.
 
-The intermediate file containing pre-computed coordinates and metadata for reconstructing any converted track, can be saved as a compressed `hseq.gz` 
-file and re-displayed, saving the time taken to compute potentially millions of coordinates. This separation was designed for use in a Galaxy interactive
-tool, where it is easy to save all the intermediate coordinate files as a collection for re-display without recalculating all the millions of coordinate pairs.
+The design isolates the complexities of displaying many different kinds of annotation at genomic scale, from the messy challenges of converting
+complex existing data in standard formats. The intention is to allow any number of precomputed track coordinate files to be supplied to the generic display 
+application, where they are automatically organised and displayed, using hints on layout supplied on the command line. 
 
 The main use case envisioned is a central repository of pre-computed plots to make annotation of the VGP genomic data easily accessible.
 Precomputed plot tracks can be reused indefinitely, mixed and matched by the user to suit their needs.
 
-Obviously, each species reference genome has a different coordinate system since they have different genomes.
-It's important to emphasise that the two haplotypes being assembled from each species also have a different coordinate system because 
-contig lengths nearly always differ. As a result plots cannot share a reference sequence axis unless the data were all mapped to exactly the same set of contigs.
-Different haplotypes can be displayed with tracks made from that haplotype reference sequence side by side or stacked, but otherwise, linking will always get 
-out of sync. Linking is automatic between plots with identical axes in Holoviews, so the metadata must always identify what was used to map any track so it
-can be displayed with other tracks from the same sequence. 
+Each species has different coordinate systems so cannot share a reference sequence axis, but can each be displayed in
+tracks with separate reference sequences side by side or stacked.
 
-Futzing to try to make things line up will almost certainly fail at some point - let's not bother. It might be possible to make two different reference sequence tracks display the same 
-chr:start-end region if they share contig names, but even then, there will be tricky differences - important to respect the original mapping for reliable synchronised displays.
+### Potential sources of annotation for display
 
-### Coordinate system for genomic assembly data
+HiC data in PAF format was used for the proof of concept 2D heatmaps. Mashmap approximate mapping PAF works well.
 
-Genomic reference data forms the backbone for any annotation browser, and each genomic region or position must be translated from something like CHR3:10000 into an internally
-consistent axis coordinate system for reliable display on a holoviews datamap. The first time a new species genome is assembled from sequence data, it's like taking all the pieces from a woodchipper and gluing
-them back together into the pre-existing tree, but this tree has never been seen before, making the task even harder. New genomes are painstakingly assembled into multiple scaffolds 
-and super-scaffolds as curation proceeds, referred to generally as "contigs". These are eventually placed into a parsimonious set of chromosomes, in the final "reference" genome. A reference genome such as the 
-current Human [release](https://www.ncbi.nlm.nih.gov/datasets/genome/GCF_000001405.40/) is the final product of many iterations of assemblies and polishing.
+Bigwig, bed and GFF are the major formats for 1D annotation tracks.
 
-Whatever the stage of assembly and polishing, genomes are typically handled in fasta format. A newly assembled haplotype may have thousands of contigs that have not yet been merged into chromosomes.
+### Coordinate system
+
+Genomic reference data forms the backbone for any annotation browser.
+New genomes are assembled into multiple "contigs", that are refined into chromosomes in reference genomes.
+Genomes are typically handled in fasta format. A newly assembled haplotype may have thousands of contigs
+that have not yet been merged into chromosomes. Contig names must be unique to each genome or haplotype.
 
 For an interactive genome browser, tracks typically run horizontally, from the start of the reference sequence on the left to the last nucleotide of the last contig.
 
 Holoviews dynamic maps require ordinal axis coordinates. Contigs must be ordered on the axes, usually by name or by length,
-so they can be mapped as axes, with tick marks and labels. The ordering is arbitrary - there is no natural order to chromosomes in a nucleus. During assembly, ordering is usually by size
-or name, but each group assembling genomes may have different rules. Edge effects where two physically independent pieces have been placed sequentially are artifactual. There is a logic
-to the contig based system of browsing offered by most conventional genome browsers such as J Browse2 or the UCSC genme browser.
+so they can be mapped as axes, with tick marks and labels.
 
-Features must have axis coordinates that position them correctly in the reference sequence used to create the axis. 
-Position is usually described by the name of the contig, and the number of bases from the start of the contig to the start of the feature. 
+Features must have a position to locate them in the reference sequence used to create the axis. 
+Position is unambiguously described by the name of the contig, and the number of bases from the start of the contig to the start of the feature. 
 Some features have a length while others for 2D grids are points. Many features may have optional annotation.
 
 To convert feature positions into plot axis coordinates, contig lengths are cumulated in the order given, and a zero is inserted,
-to give the ordinal position on the axis, for the first base of each ordered contig. The ordering makes a big difference to the visualisation.
-Typically, contigs are length sorted, but sometimes it makes more sense to use the names allocated at assembly - these depend on the assembly team
-and for the VGP, are typically SUPER for large, chromosome like features and SCAFFOLDS for less complete pieces. Then there are UNLOC versions
-of both of these where the actual ordering is not yet known well enough to assemble into a chromosome.
+to give the ordinal position on the axis, for the first base of each ordered contig. 
 
 When a feature is mapped, the appropriate contig's cumulated start is added to the feature offset, to give the 
-ordinal start coordinate on that axis for the start of the feature. 
+ordinal start coordinate on that axis for the start of the feature.
 
-A linear model makes sense for a contig, but the idea of making a single linear axis from many contigs is a fiction - they exist as multiple chromosomes, each with a
-maternal and paternal haplotype strand. It is important to understand that this fiction is used here to make it easy to "see" all the data. It is a model,
-and like all models, wrong, but in this case, useful if the limitations are understood. Sequential contigs on any axis are not sequential in the nucleus where the entire
-genome is rolled up into a complicated kind of hairball, confined to a volume of about 10 cubic microns. 
+Additional annotation values may be optionally displayed as hover tooltips.
 
-## Metadata and data format for 1D and 2D features on pre-mapped axis coordinates
+## Input format for 1D and 2D features on pre-mapped axis coordinates
 
-The converters produce gzip compressed text files, ready for the display application.
+The converters produce gzip compressed text files. 
 
 The text file must start with a header section, where every row begins with `@`.
 
 The first row of the must be either `@v1HoloSeq1D [bar|scatter|line]` or `@v1HoloSeq2D`, or the data will not be processed.
 
-Rows starting with `@@` are metadata, such as the plot title, and the URI and name of the reference sequence or haplotype.
-
-For 1D data, the chart type may be one of `bar`, `scatter` or `line`. Default is `bar`. Regions with 4 or more SD above or below the global mean can be 
+For 1D data, the chart type may be one of `bar`, `scatter` or `line`. Default is `bar`. Regions with 4 or more SD above or below the global mean are 
 emphasised
 
 2D data will be presented as an autoscaling density heatmap. The header and data might only have 1 axis name, for example where HiC pairs from one haplotype are plotted
@@ -80,7 +69,7 @@ The subsequent header rows must have the plot title, plot type, axis names, cont
 ```
 @v1HoloSeq1D bar
 @@title a very small bar plot
-@@refURI https://foo.bar.zot.fasta
+@@xclenfile hg002_H1suffixed.len
 @H1 chr1 0
 @H1 chr2 2500
 @H1 chr3 7000
@@ -88,6 +77,9 @@ The subsequent header rows must have the plot title, plot type, axis names, cont
 ```
 
 In this case, H1 will show four chromosomes starting at each of the positions shown.
+
+Metadata such as the name of the chromosome lengths file and the plot title, is prefixed with `@@`
+
 
 Data rows for 1D data must have the x ordinal axis coordinate, a feature length, and an annotation value to show for that length, such as:
 `2455453443 128 99.8`
@@ -120,8 +112,7 @@ Tap coordinates are calculated from a stream giving the tap x and y coordinates,
 A visualisation can be run locally and viewed in a desktop browser by stacking any number of compressed coordinate hseq 
 files 
 
-`panel serve holoseq_display.py --args --inFile foo.gz bar.gz baz.gz zot.gz --title my holoseq plot`
+`panel serve holoseq_display.py --show --args --inFile foo.gz bar.gz baz.gz zot.gz --title my holoseq plot`
 
-An interactive tool for Galaxy will be created.
-
+The Dockerfile is a work in progress as part of an interactive Galaxy tool.
 
