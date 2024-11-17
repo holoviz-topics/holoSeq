@@ -1,14 +1,17 @@
 # HoloSeq
 
-This document describes a precomputed mapping data format for sequence annotation. It allows large scale data to be viewed
+This project uses a precomputed mapping data format for sequence annotation that allows large scale data to be viewed
 as 1D charts or 2D heatmaps using a generic visualisation infrastructure built using the [Holoviews ecosystem](https://holoviews.org/).
+
+Preparing the coordinates for a 60GB HiC paf file with 720 million pairs takes a couple of hours so it makes sense to save them in
+an intermediate precomputed format. Displaying the resulting 1.2GB compressed coordinates for 200M pairs only involving H1 takes about 10 minutes in comparison.
 
 The presentation layer supports genome scale feature data associated with a genomic reference or other sequence. The user can pan and zoom 
 smoothly from whole genomes down to individual points, with tens of millions of rows of data, in a web browser running on a suitable laptop or in Galaxy. 
 The data format provides all the information needed for recreating a plot using the inbuilt reference sequence coordinates as axes.
 
 The design isolates the complexities of displaying many different kinds of annotation at genomic scale, from the messy challenges of converting
-complex existing data in standard formats. The intention is to allow any number of precomputed track coordinage files to be supplied to the generic display 
+complex existing data in standard formats. The intention is to allow any number of precomputed track coordinate files to be supplied to the generic display 
 application, where they are automatically organised and displayed, using hints on layout supplied on the command line. 
 
 The main use case envisioned is a central repository of pre-computed plots to make annotation of the VGP genomic data easily accessible.
@@ -19,7 +22,7 @@ tracks with separate reference sequences side by side or stacked.
 
 ### Potential sources of annotation for display
 
-HiC data in PAF format was used for the proof of concept 2D heatmaps.
+HiC data in PAF format was used for the proof of concept 2D heatmaps. Mashmap approximate mapping PAF works well.
 
 Bigwig, bed and GFF are the major formats for 1D annotation tracks.
 
@@ -28,7 +31,7 @@ Bigwig, bed and GFF are the major formats for 1D annotation tracks.
 Genomic reference data forms the backbone for any annotation browser.
 New genomes are assembled into multiple "contigs", that are refined into chromosomes in reference genomes.
 Genomes are typically handled in fasta format. A newly assembled haplotype may have thousands of contigs
-that have not yet been merged into chromosomes.
+that have not yet been merged into chromosomes. Contig names must be unique to each genome or haplotype.
 
 For an interactive genome browser, tracks typically run horizontally, from the start of the reference sequence on the left to the last nucleotide of the last contig.
 
@@ -36,7 +39,7 @@ Holoviews dynamic maps require ordinal axis coordinates. Contigs must be ordered
 so they can be mapped as axes, with tick marks and labels.
 
 Features must have a position to locate them in the reference sequence used to create the axis. 
-Position is usually described by the name of the contig, and the number of bases from the start of the contig to the start of the feature. 
+Position is unambiguously described by the name of the contig, and the number of bases from the start of the contig to the start of the feature. 
 Some features have a length while others for 2D grids are points. Many features may have optional annotation.
 
 To convert feature positions into plot axis coordinates, contig lengths are cumulated in the order given, and a zero is inserted,
@@ -65,7 +68,8 @@ The subsequent header rows must have the plot title, plot type, axis names, cont
 
 ```
 @v1HoloSeq1D bar
-@title a very small bar plot
+@@title a very small bar plot
+@@xclenfile hg002_H1suffixed.len
 @H1 chr1 0
 @H1 chr2 2500
 @H1 chr3 7000
@@ -73,6 +77,9 @@ The subsequent header rows must have the plot title, plot type, axis names, cont
 ```
 
 In this case, H1 will show four chromosomes starting at each of the positions shown.
+
+Metadata such as the name of the chromosome lengths file and the plot title, is prefixed with `@@`
+
 
 Data rows for 1D data must have the x ordinal axis coordinate, a feature length, and an annotation value to show for that length, such as:
 `2455453443 128 99.8`
@@ -105,8 +112,8 @@ Tap coordinates are calculated from a stream giving the tap x and y coordinates,
 A visualisation can be run locally and viewed in a desktop browser by stacking any number of compressed coordinate hseq 
 files 
 
-`panel serve holoseq_display.py --args --inFile foo.gz bar.gz baz.gz zot.gz --title my holoseq plot`
+`panel serve holoseq_display.py --show --args --inFile foo.gz bar.gz baz.gz zot.gz --title my holoseq plot`
 
-An interactive tool for Galaxy will be created.
+The Dockerfile is a work in progress as part of an interactive Galaxy tool.
 
 
