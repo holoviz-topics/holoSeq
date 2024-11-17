@@ -512,7 +512,7 @@ class pafConvert:
         @v1HoloSeq2D for example
         """
 
-        def prepHeader(haps, hsId, xcontigs, ycontigs, args, outf, subtitle, xclenfile, yclenfile):
+        def prepHeader(haps, hsId, xcontigs, ycontigs, args, outf, subtitle, xclenfile, yclenfile, ax):
             """
             holoSeq output format - prepare gzip output channels
             """
@@ -530,6 +530,7 @@ class pafConvert:
                 "@@refURI %s" % args.refURI,
                 "@@xclenfile %s" % xclenfile,
                 "@@yclenfile %s" % yclenfile,
+                "@@axes %s" % ax
             ]
 
             outs = "\n".join(metah + h) + "\n"
@@ -541,25 +542,27 @@ class pafConvert:
             haps[0],
             hsId,
             xcontigs,
-            ycontigs,
+            xcontigs,
             args,
             self.cis1f,
             " Pairs on %s" % haps[0],
             xclenfile = args.xclenfile,
-            yclenfile = args.xclenfile
+            yclenfile = args.xclenfile,
+            ax = haps[0]
         )
         f2 = gzip.open("%s_cis%s_hseq.gz" % (self.inFname, haps[1]), mode="wb")
         self.cis2f = io.BufferedWriter(f2, buffer_size=1024 * 1024)
         prepHeader(
             haps[1],
             hsId,
-            xcontigs,
+            ycontigs,
             ycontigs,
             args,
             self.cis2f,
             " Pairs on %s" % haps[1],
             xclenfile = args.yclenfile,
-            yclenfile = args.yclenfile
+            yclenfile = args.yclenfile,
+            ax = haps[1]
         )
         f3 = gzip.open("%s_trans_hseq.gz" % (self.inFname), mode="wb")
         self.transf = io.BufferedWriter(f3, buffer_size=1024 * 1024)
@@ -572,7 +575,8 @@ class pafConvert:
             self.transf,
             " Pairs on different haplotypes",
             xclenfile = args.xclenfile,
-            yclenfile = args.yclenfile
+            yclenfile = args.yclenfile,
+            ax = 'BOTH'
         )
 
 
@@ -630,6 +634,10 @@ if __name__ == "__main__":
     for h in xhaps + yhaps:
         if h not in haps:
             haps.append(h)
+    if len(haps) == 1:
+        log.debug('extending haps %s' % haps)
+        haps.append(haps[0])
+    haps.sort()
     for f in args.inFile:
         ps = Path(f).suffix.lower()
         log.debug("inFile=%s, ftype = %s" % (f, ps))

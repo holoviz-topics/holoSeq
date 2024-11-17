@@ -177,8 +177,11 @@ class holoSeq_maker:
                                 log.warn(
                                     f"Supplied 1D input {inFile} at row {i} = {trow} - needs at least one integer coordinate to be a valid holoSeq input file")
                                 return
-
-        return (hsDims, haps, xcoords, ycoords, annos, plotType, metadata, gffdata)
+        if len(hh) < 2:
+            log.debug('extending haps %s' % hh)
+            hh.append(hh[0])
+        hh.sort()
+        return (hsDims, haps, xcoords, ycoords, annos, plotType, metadata, gffdata, hh)
 
     def makePafPanel(self, inFile, pwidth):
         """
@@ -211,7 +214,7 @@ class holoSeq_maker:
             if np.isnan(x) or np.isnan(y):
                 s = "Mouse click on image for location"
             else:
-                i = bisect_left(self.h2starts, x)
+                i = bisect_left(h2starts, x)
                 chrx = h2names[i - 1]
                 offsx = x - h2starts[i - 1]
                 i = bisect_left(h2starts, y)
@@ -251,7 +254,7 @@ class holoSeq_maker:
             )
             return str_pane
 
-        (hsDims, hapsread, xcoords, ycoords, annos, plotType, metadata, gffdata) = (
+        (hsDims, hapsread, xcoords, ycoords, annos, plotType, metadata, gffdata, hh) = (
             self.import_holoSeq_data(inFile)
         )
         title = " ".join(metadata["title"])
@@ -260,6 +263,8 @@ class holoSeq_maker:
         print("Read nx=", len(xcoords), "ny=", len(ycoords))
         h1starts = []
         h1names = []
+        h2starts = []
+        h2names = []
         for i, hap in enumerate(hapsread.keys()):
             haps.append(hap)
             hqstarts[hap] = OrderedDict()
@@ -269,23 +274,18 @@ class holoSeq_maker:
                 if i == 0:
                     h1starts.append(cstart)
                     h1names.append(contig)
-        hap = haps[0]
-
+                else:
+                    h2starts.append(cstart)
+                    h2names.append(contig)
+        hap = hh[0]
+        if (len(h2starts) == 0):
+            h2starts = h1starts
+            h2names = h1names
+            log.warn('only one haplotype read for %s' % title)
         qtic1 = [(h1starts[i], h1names[i]) for i in range(len(h1starts))]
-        qtic2 = qtic1
-        isTrans = False
-        if (
-            hsDims == "2"
-        ):  # may be one or two distinct haplotype identifiers - H1 +/- H2
-            if len(haps) > 1:
-                hap = haps[1]
-                isTrans = True
-                h2starts = [hqstarts[hap][x] for x in hqstarts[hap].keys()]
-                h2names = list(hqstarts[hap].keys())
-                qtic2 = [(hqstarts[hap][x], x) for x in hqstarts[hap].keys()]
-                print("h2names=", h1names[:20], len(h2names))
-        if not isTrans:
-            print(len(h1names), "h1names=", h1names[:20])
+        hap = hh[1]
+        qtic2 = [(hqstarts[hap][x], x) for x in hqstarts[hap].keys()]
+   
         # can take the np.tril or filter the upper triangle while processing pairs
         # and rotate so the diagonal becomes the x axis but need some kind of
         # sideways scroller to work right
@@ -297,30 +297,31 @@ class holoSeq_maker:
         # it can be copied, edited to suit your needs and
         # run repeatedly without waiting for the data to be mapped.
         xcf = os.path.splitext(metadata["xclenfile"][0])[0]
-        ycf = os.path.splitext(metadata["yclenfile"][0])[0]
+        ycf = 'Y:' + os.path.splitext(metadata["yclenfile"][0])[0]
         print("xcf", xcf, "ycf", ycf)
         pafxy = pd.DataFrame.from_dict({xcf: xcoords, ycf: ycoords})
         pafp = hv.Points(pafxy, kdims=[xcf, ycf])
 
         # apply_when(pafp, operation=rasterize, predicate=lambda x: len(x) > 5000)
         stream = hv.streams.Tap(x=0, y=0)
-        if isTrans:
+        ax = metadata.get('axes', [None])[0]
+        log.debug('axes = %s' % ax)
+        if ax == "BOTH":
             showloc = pn.bind(showTrans, x=stream.param.x, y=stream.param.y)
-        else:
+        elif ax == haps[0]:
             showloc = pn.bind(showH1, x=stream.param.x, y=stream.param.y)
-        # to rotate so the diagonal becomes the x axis
-        # xcis1r, ycis1r = rotatecoords(xcis1, ycis1, radians=0.7853981633974483, origin=(max(xcis1),max(ycis1)))
-        # pafxycis1 = pd.DataFrame(np.vstack([xcis1r,ycis1r]).T, columns = ['x', 'y'])
-        # bisect.bisect_left(a, x, lo=0, hi=len(a), *, key=None)
-        # prepare and show the 3 plots
-
+        elif ax == haps[1]:
+            showloc = pn.bind(showH2, x=stream.param.x, y=stream.param.y)
+        else:
+            log.warn('ax = %s for title = %s - cannot assign axes' % (ax, title))
+            showloc = pn.bind(showTrans, x=stream.param.x, y=stream.param.y)
         p1 = pn.Column(
             showloc,
             pn.pane.HoloViews(
                 dynspread(rasterize(pafp), streams=[stream])
                 .relabel("%s" % title)
                 .opts(
-                    shared_axes=True,
+                    shared_axes=False,
                     cmap="inferno",
                     cnorm="log",
                     colorbar=True,
@@ -365,7 +366,7 @@ class holoSeq_maker:
             )
             return str_pane
 
-        (hsDims, hapsread, xcoords, ycoords, annos, plotType, metadata, gffdata) = (
+        (hsDims, hapsread, xcoords, ycoords, annos, plotType, metadata, gffdata, hh) = (
             self.import_holoSeq_data(inFile)
         )
         title = " ".join(metadata["title"])
@@ -463,7 +464,7 @@ pn.pane.HTML(iframe_html, height=350, sizing_mode="stretch_width")
             )
             return str_pane
 
-        (hsDims, hapsread, xcoords, ycoords, annos, plotType, metadata, gffdata) = self.import_holoSeq_data(inFile)
+        (hsDims, hapsread, xcoords, ycoords, annos, plotType, metadata, gffdata, hh) = self.import_holoSeq_data(inFile)
         xcf = os.path.splitext(metadata["xclenfile"][0])[0]
         segs = {
             xcf: [],
