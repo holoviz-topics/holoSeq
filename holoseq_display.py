@@ -45,8 +45,8 @@ hv.extension('bokeh','matplotlib', width=100)
 
 # Default values suitable for this notebook
 decimate.max_samples=1000
-dynspread.max_px=20
-dynspread.threshold=0.5
+dynspread.max_px=8
+dynspread.threshold=0.75
 ResampleOperation2D.width=250
 ResampleOperation2D.height=250
 
