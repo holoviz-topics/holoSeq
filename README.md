@@ -23,7 +23,7 @@ A draft framework [description and specification is here.](https://github.com/fu
 
 This proof of concept shows how millions of features can be generated along a couple of chromosomes and plotted using rasterize and datashader, with each tap converted into contig and offset. It runs in an IPython notebook, or if the dependencies are available, can be served from this repository's root, as:
 
-> panel serve holoSeq_random.py --show
+`panel serve holoSeq_random.py --show`
 
 Edit the default 10000 xmax value to get a sense of scale capacity - 10M is not a problem.
 There is very little code needed for plotting. Most of the code is needed to create some sample contigs of fixed length into some arbitrary ordering along the axes.
