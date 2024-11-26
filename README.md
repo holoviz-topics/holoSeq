@@ -31,6 +31,8 @@ Their lengths are cumulated and the resulting array represents axis offsets to t
 used for calculating the x and y coordinates for randomly generated points so the are correctly located
 in an internally consistent 2D space. 
 
+This is proposed as a generalisable model for a linear display of genomic features located on a set of independent contigs in
+holoSeq displays.
 
 ```
 # see https://github.com/fubar2/holoSeq
