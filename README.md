@@ -14,9 +14,9 @@ There are some situations where genomic features need to be visualised in two di
 
 *Help wanted. PR and suggestions welcomed.*
 
-This is new work in progress. 
+This is new work in progress. Development started in late October 2024. 
+It was transferred into the Holoviz-topics repository on 27 November 2024
 
-Development started in late October 2024. 
 A draft framework [description and specification is here.](https://github.com/fubar2/holoSeq/blob/main/HoloSeqOverview.md). 
 
 ## Core idea: Features on intervals arranged along linear axes for browsing
