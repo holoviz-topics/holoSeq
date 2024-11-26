@@ -35,10 +35,12 @@ import io
 import itertools
 import logging
 import math
-import random
+import numpy as np
+
 import re
 import os
 
+import pandas as pd
 import pybigtools
 
 logging.basicConfig(level=logging.DEBUG)
@@ -50,20 +52,33 @@ inFile = "/home/ross/rossgit/holoviews-examples/huge.paf"
 holoSeqHeaders = ["@v1HoloSeq1D", "@v1HoloSeq2D"]
 
 
-def rotatecoords(x, y, radians=0.7853981633974483, origin=(0, 0)):
+def rotatecoords(
+    xin, yin, radians=0.7853981633974483, origin=(0, 0), xwidth=3000000, ywidth=3000000
+):
+    # make a rotated heatmap where the diagonal becomes the horizontal x axis
     # https://gist.github.com/LyleScott/d17e9d314fbe6fc29767d8c5c029c362
-    # to rotate so the diagonal becomes the x axis
-    # this inflates by sqrt(2) so would need to rescale 1D tracks - not sure that's ideal but worth trying.
+    # this inflates the xaxis by sqrt(2) but can rescale and it seems to work (TM)
     # xcis1r, ycis1r = rotatecoords(xcis1, ycis1, radians=0.7853981633974483, origin=(max(xcis1),max(ycis1)))
     # pafxycis1 = pd.DataFrame(np.vstack([xcis1r,ycis1r]).T, columns = ['x', 'y'])
+    # y height is complicated - h^2 + (1/2*sqrt2*xwdith)^2 = y^2
+    sqrt2 = math.sqrt(2)
     offset_x, offset_y = origin
-    adjusted_x = x - offset_x
-    adjusted_y = y - offset_y
+    adjusted_x = xin - offset_x
+    adjusted_y = yin - offset_y
     cos_rad = math.cos(radians)
     sin_rad = math.sin(radians)
     qx = offset_x + cos_rad * adjusted_x + sin_rad * adjusted_y
     qy = offset_y + -sin_rad * adjusted_x + cos_rad * adjusted_y
-    return qx, qy
+    print("max/min qy=", min(qy), max(qy))
+    # must rescale x after inflation from rotation
+    xdelta = xwidth * sqrt2
+    xmin = xwidth - xdelta
+    ydelta = (ywidth**2 - (xdelta / 2) ** 2) ** 0.5
+    ymin = (1.0 - math.sin(radians)) * ywidth
+    xr = [(x - xmin) / xdelta * xwidth for x in qx]
+    yr = [(x - ymin) / ydelta * ywidth for x in qy]
+    xyr = pd.DataFrame(np.vstack([xr, yr]).T, columns=["x", "y"])
+    return xyr
 
 
 def getHap(contig):
@@ -98,7 +113,7 @@ def getContigs(lenFile):
                     seen[c] = c
                     contigs.append((c, int(clen)))
                 h = getHap(c)
-                if not h in haps:
+                if h not in haps:
                     haps.append(h)
     return contigs, haps
 
@@ -157,7 +172,7 @@ def VGPsortfunc(s1, s2):
         return c1, n1, n2
 
     s1 = [s1[0].upper(), s1[1]]
-    s2= [s2[0].upper(), s2[1]]
+    s2 = [s2[0].upper(), s2[1]]
     if s1[0] == s2[0]:  # simplest case - same contig, sort on offset
         return s1[1] - s2[1]  # neg if left sorts before
     u1 = "UNLOC" in s1[0]
@@ -457,62 +472,94 @@ class pafConvert:
 
     def __init__(self, inFname, args, xcontigs, ycontigs, haps):
         self.inFname = inFname
+        self.xcontigs = xcontigs
+        self.ycontigs = ycontigs
         # have the axes set up so prepare the three plot x/y vectors
         # for a second pass to calculate all the coordinates.
         # adding tooltips just does not scale so abandoned - see the tooltip old version
-        rowi = 0
         ncis1 = ncis2 = ntrans = 0
         # print('ycon %s' % (ycontigs))
         hsId = holoSeqHeaders[1]
         self.inFname = inFname
         self.prepPafGZ(hsId, haps, xcontigs, ycontigs, args)
-        with open(inFname) as f:
-            for rowi, rows in enumerate(f):
-                row = rows.strip().split()
-                if len(row) > 7:
-                    c1 = row[0]
-                    c2 = row[5]
-                    n1 = int(row[2])
-                    n2 = int(row[7])
-                    H1 = getHap(c1)
-                    H2 = getHap(c2)
-                    if H1 != H2:  # trans
-                        if H1 == haps[0]:  # x is h1 for trans - otherwise ignore
-                            xstart = xcontigs[c1]
-                            ystart = ycontigs[c2]
-                            row = str.encode("%d %d\n" % (xstart + n1, ystart + n2))
-                            self.transf.write(row)
-                            ntrans += 1
-                        else:
-                            xstart = xcontigs[c2]
-                            ystart = ycontigs[c1]
-                            row = str.encode("%d %d\n" % (xstart + n2, ystart + n1))
-                            self.transf.write(row)
-                            ntrans += 1
-                    else:  # cis
-                        if H1 == haps[0]:
-                            xstart = xcontigs[c1]
-                            ystart = xcontigs[c2]
-                            row = str.encode("%d %d\n" % (xstart + n1, ystart + n2))
-                            self.cis1f.write(row)
-                            ncis1 += 1
-                        else:
-                            xstart = ycontigs[c1]
-                            ystart = ycontigs[c2]
-                            row = str.encode("%d %d\n" % (xstart + n1, ystart + n2))
-                            self.cis2f.write(row)
-                            ncis2 += 1
+        if self.isGzip(inFname):
+            with gzip.open(inFname, "rt") as f:
+                self.readPAF(f)
+        else:
+            with open(inFname) as f:
+                self.readPAF(f)
         self.cis1f.close()
         self.cis2f.close()
         self.transf.close()
+
+    def readPAF(self, f):
+        # might be a gz
+        ncis1 = ncis2 = ntrans = 0
+        for rowi, rows in enumerate(f):
+            row = rows.strip().split()
+            if len(row) > 7:
+                c1 = row[0]
+                c2 = row[5]
+                n1 = int(row[2])
+                n2 = int(row[7])
+                H1 = getHap(c1)
+                H2 = getHap(c2)
+                if H1 != H2:  # trans
+                    if H1 == haps[0]:  # x is h1 for trans - otherwise ignore
+                        xstart = self.xcontigs[c1]
+                        ystart = self.ycontigs[c2]
+                        row = str.encode("%d %d\n" % (xstart + n1, ystart + n2))
+                        self.transf.write(row)
+                        ntrans += 1
+                    else:
+                        xstart = self.xcontigs[c2]
+                        ystart = self.ycontigs[c1]
+                        row = str.encode("%d %d\n" % (xstart + n2, ystart + n1))
+                        self.transf.write(row)
+                        ntrans += 1
+                else:  # cis
+                    if H1 == haps[0]:
+                        xstart = self.xcontigs[c1]
+                        ystart = self.xcontigs[c2]
+                        row = str.encode("%d %d\n" % (xstart + n1, ystart + n2))
+                        self.cis1f.write(row)
+                        ncis1 += 1
+                    else:
+                        xstart = self.ycontigs[c1]
+                        ystart = self.ycontigs[c2]
+                        row = str.encode("%d %d\n" % (xstart + n1, ystart + n2))
+                        self.cis2f.write(row)
+                        ncis2 += 1
         log.debug("ncis1=%d, ncis2=%d, ntrans=%d" % (ncis1, ncis2, ntrans))
+
+    def isGzip(self, inFname):
+        with gzip.open(inFname, "r") as fh:
+            try:
+                fh.read(1)
+                return True
+            except gzip.BadGzipFile:
+                log.info(
+                    "inFname %s is not a gzip so will read as text" % inFname
+                )
+                return False
 
     def prepPafGZ(self, hsId, haps, xcontigs, ycontigs, args):
         """
         @v1HoloSeq2D for example
         """
 
-        def prepHeader(haps, hsId, xcontigs, ycontigs, args, outf, subtitle, xclenfile, yclenfile, ax):
+        def prepHeader(
+            haps,
+            hsId,
+            xcontigs,
+            ycontigs,
+            args,
+            outf,
+            subtitle,
+            xclenfile,
+            yclenfile,
+            ax,
+        ):
             """
             holoSeq output format - prepare gzip output channels
             """
@@ -525,12 +572,12 @@ class pafConvert:
                 hsId,
                 "@@heatmap",
                 "@@title %s" % args.title + subtitle,
-                "@@datasource %s" % "bigwig",
+                "@@datasource %s" % "paf",
                 "@@datafile %s" % self.inFname,
                 "@@refURI %s" % args.refURI,
                 "@@xclenfile %s" % xclenfile,
                 "@@yclenfile %s" % yclenfile,
-                "@@axes %s" % ax
+                "@@axes %s" % ax,
             ]
 
             outs = "\n".join(metah + h) + "\n"
@@ -546,9 +593,9 @@ class pafConvert:
             args,
             self.cis1f,
             " Pairs on %s" % haps[0],
-            xclenfile = args.xclenfile,
-            yclenfile = args.xclenfile,
-            ax = haps[0]
+            xclenfile=args.xclenfile,
+            yclenfile=args.xclenfile,
+            ax=haps[0],
         )
         f2 = gzip.open("%s_cis%s_hseq.gz" % (self.inFname, haps[1]), mode="wb")
         self.cis2f = io.BufferedWriter(f2, buffer_size=1024 * 1024)
@@ -560,9 +607,9 @@ class pafConvert:
             args,
             self.cis2f,
             " Pairs on %s" % haps[1],
-            xclenfile = args.yclenfile,
-            yclenfile = args.yclenfile,
-            ax = haps[1]
+            xclenfile=args.yclenfile,
+            yclenfile=args.yclenfile,
+            ax=haps[1],
         )
         f3 = gzip.open("%s_trans_hseq.gz" % (self.inFname), mode="wb")
         self.transf = io.BufferedWriter(f3, buffer_size=1024 * 1024)
@@ -574,9 +621,9 @@ class pafConvert:
             args,
             self.transf,
             " Pairs on different haplotypes",
-            xclenfile = args.xclenfile,
-            yclenfile = args.yclenfile,
-            ax = 'BOTH'
+            xclenfile=args.xclenfile,
+            yclenfile=args.yclenfile,
+            ax="BOTH",
         )
 
 
@@ -635,14 +682,14 @@ if __name__ == "__main__":
         if h not in haps:
             haps.append(h)
     if len(haps) == 1:
-        log.debug('extending haps %s' % haps)
+        log.debug("extending haps %s" % haps)
         haps.append(haps[0])
     haps.sort()
     for f in args.inFile:
         ps = Path(f).suffix.lower()
         log.debug("inFile=%s, ftype = %s" % (f, ps))
 
-        if ps == ".paf":
+        if ps in [".paf", ".paf.gz"]:
             p = pafConvert(f, args, sxcontigs, sycontigs, haps)
         elif ps in [".bw", ".bigwig"]:
             outf = "%s.hseq.gz" % f

@@ -21,8 +21,9 @@ import numpy as np
 import os
 
 import holoviews as hv
-import panel as pn
 import pandas as pd
+import panel as pn
+
 
 from holoviews.operation.datashader import (
     rasterize,
@@ -39,7 +40,7 @@ log = logging.getLogger("holoseq_display")
 
 from holoviews import opts
 from holoviews.operation.datashader import datashade, rasterize, shade, dynspread, spread
-
+import hvplot.pandas
 
 hv.extension('bokeh','matplotlib', width=100)
 
@@ -192,12 +193,18 @@ class holoSeq_maker:
             if np.isnan(x) or np.isnan(y):
                 s = "Mouse click on image for location"
             else:
+                chrx = "Out of range"
+                offsx = 0
+                chry= "Out of range"
+                offsy = 0
                 i = bisect_left(h1starts, x)
-                chrx = h1names[i - 1]
-                offsx = x - h1starts[i - 1]
+                if i > 0 and i <= len(h1names):
+                    chrx = h1names[i - 1]
+                    offsx = x - h1starts[i - 1]
                 i = bisect_left(h1starts, y)
-                chry = h1names[i - 1]
-                offsy = y - h1starts[i - 1]
+                if i > 0 and i <= len(h1names):
+                    chry = h1names[i - 1]
+                    offsy = y - h1starts[i - 1]
                 s = "X axis %s:%d Y axis %s:%d" % (chrx, offsx, chry, offsy)
             str_pane = pn.pane.Str(
                 s,
@@ -212,14 +219,20 @@ class holoSeq_maker:
 
         def showH2(x, y):
             if np.isnan(x) or np.isnan(y):
-                s = "Mouse click on image for location"
+                s = "Mouse click on image for location"           
             else:
+                chrx = "Out of range"
+                offsx = 0
+                chry= "Out of range"
+                offsy = 0
                 i = bisect_left(h2starts, x)
-                chrx = h2names[i - 1]
-                offsx = x - h2starts[i - 1]
+                if i > 0 and i <= len(h2names):
+                    chrx = h2names[i - 1]
+                    offsx = x - h2starts[i - 1]
                 i = bisect_left(h2starts, y)
-                chry = h2names[i - 1]
-                offsy = y - h2starts[i - 1]
+                if i > 0 and i <= len(h2names):
+                    chry = h2names[i - 1]
+                    offsy = y - h2starts[i - 1]
                 s = "X axis %s:%d Y axis %s:%d" % (chrx, offsx, chry, offsy)
             str_pane = pn.pane.Str(
                 s,
@@ -236,12 +249,18 @@ class holoSeq_maker:
             if np.isnan(x) or np.isnan(y):
                 s = "Mouse click on image for location"
             else:
+                chrx = "Out of range"
+                offsx = 0
+                chry= "Out of range"
+                offsy = 0
                 i = bisect_left(h1starts, x)
-                chrx = h1names[i - 1]
-                offsx = x - h1starts[i - 1]
+                if i > 0 and i <= len(h1names):
+                    chrx = h1names[i - 1]
+                    offsx = x - h1starts[i - 1]
                 i = bisect_left(h2starts, y)
-                chry = h2names[i - 1]
-                offsy = y - h2starts[i - 1]
+                if i > 0 and i <= len(h2names):
+                    chry = h2names[i - 1]
+                    offsy = y - h2starts[i - 1]
                 s = "X axis %s:%d Y axis %s:%d" % (chrx, offsx, chry, offsy)
             str_pane = pn.pane.Str(
                 s,
@@ -315,16 +334,20 @@ class holoSeq_maker:
         else:
             log.warn('ax = %s for title = %s - cannot assign axes' % (ax, title))
             showloc = pn.bind(showTrans, x=stream.param.x, y=stream.param.y)
+        # an alternative but can't get a stream in there..nice to have control over the resample_when but.
+        # dat.hvplot(kind="scatter", x="x", y="y", color="maroon", rasterize=True, resample_when=200, cnorm='log', padding=(0, 0.1), cmap="inferno",
+        #   min_height=700, autorange='y', title="Datashader Rasterize", colorbar=True, line_width=2 ,marker="x" )
+
         p1 = pn.Column(
             showloc,
             pn.pane.HoloViews(
                 dynspread(rasterize(pafp), streams=[stream])
                 .relabel("%s" % title)
                 .opts(
-                    shared_axes=False,
                     cmap="inferno",
                     cnorm="log",
                     colorbar=True,
+                    shared_axes=False,
                     width=self.pwidth,
                     height=self.pwidth,
                     xticks=qtic1,
