@@ -1,8 +1,12 @@
-# holoSeq: Interactive viewing of genomic annotation
+# holoSeq: Interactive genomic annotation at scale
 
-### Interactively browse millions of features in a laptop browser window 
+## Enabling 2D feature plots for whole genomes in a web browser
+
+Most available interactive genome browsers show features aligned along a single chromosome at a time.
+There are some situations where genomic features need to be visualised in two dimensions, with the same or with different genomes as the X and Y axes. Examples shown here include sequence similarity dotplots between a pair of haplotypes and between reference genomes from two closely related species, and scatter plots of unbinned individual HiC contact pairs within and between two haplotypes that show fine scale detail. 
+
 *Browse 1D charts and 2D heatmap plots, that scale themselves when zoomed from the entire genome down to individual points and back.* 
-*Designed for Galaxy interactive tools. Works on a laptop. Built on the [Holoviews](https://holoviews.org/) and IPython notebook ecosystem.*
+*Designed for Galaxy interactive tools. Works on a laptop. Built on the [Holoviz](https://github.com/holoviz/holoviz) ecosystem.*
 
 <img src="https://github.com/fubar2/hv-notebooks/blob/main/h2.gif" alt="zoom demo" width="125"/>       <img src="https://github.com/fubar2/hv-notebooks/blob/main/h1.gif" alt="zoom demo" width="125"/>
 
@@ -17,11 +21,9 @@ A draft framework [description and specification is here.](https://github.com/fu
 
 ## Core idea: Features on intervals arranged along linear axes for browsing
 
-This proof of concept shows how a tap is converted back into contig and offset, and how millions of points can be 
-plotted using rasterize and datashader. It runs in an IPythong notebook, or if the dependencies are available, can be served from
-this repository's root, as:
+This proof of concept shows how millions of features can be generated along a couple of chromosomes and plotted using rasterize and datashader, with each tap converted into contig and offset. It runs in an IPython notebook, or if the dependencies are available, can be served from this repository's root, as:
 
-> panel serve holoSeq_random.py --show
+`panel serve holoSeq_random.py --show`
 
 Edit the default 10000 xmax value to get a sense of scale capacity - 10M is not a problem.
 There is very little code needed for plotting. Most of the code is needed to create some sample contigs of fixed length into some arbitrary ordering along the axes.
@@ -29,14 +31,13 @@ Their lengths are cumulated and the resulting array represents axis offsets to t
 used for calculating the x and y coordinates for randomly generated points so the are correctly located
 in an internally consistent 2D space. 
 
-This is proposed as a generalisable model for a linear display of genomic features located on a set of independent contigs in
-holoSeq displays.
 
 ```
 # see https://github.com/fubar2/holoSeq
 # Needs dependencies - uncomment and run the next line to install them in a notebook
 # ! pip install datashader dask[dataframe] holoviews[recommended] pandas matplotlib bokeh
-#
+# or in a python venv, use
+# pip -r requirements.txt
 
 from bisect import bisect_left
 from collections import OrderedDict
@@ -118,6 +119,13 @@ pnc = pn.Column(
 
 pnc.servable(title=title, )
 ```
+
+This is proposed as a generalisable model for a linear display of genomic features located on a set of independent contigs in
+holoSeq displays. 
+
+Operating with very large inputs, an important element of the holoSeq model is an intermediate compressed pre-computed plotting format, including metadata. The intermediate file can be much smaller than text input formats, and will always be correctly rendered by the plotting program. 
+
+Precomputing the plot coordinates for pairs from a 60GB input PAF file will take a couple of hours.  Best done once, because the compressed precomputed plot can be widely shared for viewing. A few hundred million pairs from that PAF file will take 10-12 minutes for panel to load and display. Galaxy's interactive tools make it very straightforward to deploy holoSeq or other holoViz applications to give users interactive access to visualisations of very large data.
 
 ## Real data demonstration with millions of pairs from VGP HiC data
 
