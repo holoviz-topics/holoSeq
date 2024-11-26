@@ -1,7 +1,7 @@
 # see https://github.com/fubar2/holoSeq
 # pip install datashader dask[dataframe] holoviews[recommended] pandas matplotlib bokeh
 #
-# panel serve --address 0.0.0.0 --port 8080 --show --session-token-expiration 9999999 --args --inFile ../hg002_bothHiC.paf_cisH1_hseq.gz 
+# panel serve --address 0.0.0.0 --port 8080 --show --session-token-expiration 9999999 --args --inFile ../hg002_bothHiC.paf_cisH1_hseq.gz
 # This is a generic plot re-creator for holoSeq hseq compressed coordinate data.
 # It presents interactive plots at scale using panel.
 # Plot coordinates and axis metadata are prepared from genomic data such as PAF or bigwig files,
@@ -39,17 +39,23 @@ logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger("holoseq_display")
 
 from holoviews import opts
-from holoviews.operation.datashader import datashade, rasterize, shade, dynspread, spread
-import hvplot.pandas
+from holoviews.operation.datashader import (
+    datashade,
+    rasterize,
+    shade,
+    dynspread,
+    spread,
+)
 
-hv.extension('bokeh','matplotlib', width=100)
+
+hv.extension("bokeh", "matplotlib", width=100)
 
 # Default values suitable for this notebook
-decimate.max_samples=1000
-dynspread.max_px=8
-dynspread.threshold=0.75
-ResampleOperation2D.width=250
-ResampleOperation2D.height=250
+decimate.max_samples = 1000
+dynspread.max_px = 8
+dynspread.threshold = 0.75
+ResampleOperation2D.width = 250
+ResampleOperation2D.height = 250
 
 
 # inFile = "galaxy_inputs/paf/bothmap.paf.tab.tabular"
@@ -102,7 +108,9 @@ class holoSeq_maker:
                         log.warn(
                             f"Supplied input {inFile} has first row {trow} so is not a valid holoSeq input file"
                         )
-                        log.warn("First row must start with one of these:%s" % holoSeqHeaders)
+                        log.warn(
+                            "First row must start with one of these:%s" % holoSeqHeaders
+                        )
                         return
                     hsDims = holoSeqHeaders.index(hseqformat) + 1
                     if hsDims == 1:
@@ -128,7 +136,9 @@ class holoSeq_maker:
                                 haps[hap]["cn"].append(cname.strip())
                                 haps[hap]["startpos"].append(int(cstart.strip()))
                             else:
-                                log.warn(f"Supplied input {inFile} at row {i} = {row} lacks reference name, contig name and contig length. Not a valid holoSeq input file")
+                                log.warn(
+                                    f"Supplied input {inFile} at row {i} = {row} lacks reference name, contig name and contig length. Not a valid holoSeq input file"
+                                )
                                 return
                         else:
                             if len(srow) >= 2:
@@ -141,7 +151,8 @@ class holoSeq_maker:
                                 haps[hap]["startpos"].append(int(cstart))
                             else:
                                 log.warn(
-                                    f"Supplied input {inFile} at row {i} = {row} lacks reference name, contig name and contig length. Not a valid holoSeq input file")
+                                    f"Supplied input {inFile} at row {i} = {row} lacks reference name, contig name and contig length. Not a valid holoSeq input file"
+                                )
                                 return
                 else:  # not header row
                     srow = trow.split()
@@ -149,7 +160,8 @@ class holoSeq_maker:
                     if hsDims == 2:
                         if lrow < 2:
                             log.warn(
-                                    f"Supplied 2D input {inFile} at row {i} = {trow} - needs at least two coordinates to be a valid holoSeq input file")
+                                f"Supplied 2D input {inFile} at row {i} = {trow} - needs at least two coordinates to be a valid holoSeq input file"
+                            )
                             return
                         else:
                             if srow[0].isdigit() and srow[1].isdigit():
@@ -159,7 +171,8 @@ class holoSeq_maker:
                                     annos.append(srow[2:])
                             else:
                                 log.warn(
-                                    f"Supplied 2D input {inFile} at row {i} = {trow} - needs at least two integer coordinates to be a valid holoSeq input file")
+                                    f"Supplied 2D input {inFile} at row {i} = {trow} - needs at least two integer coordinates to be a valid holoSeq input file"
+                                )
                                 return
                     else:
                         if isGFF:
@@ -176,10 +189,11 @@ class holoSeq_maker:
                                     annos.append(srow[2:])
                             else:
                                 log.warn(
-                                    f"Supplied 1D input {inFile} at row {i} = {trow} - needs at least one integer coordinate to be a valid holoSeq input file")
+                                    f"Supplied 1D input {inFile} at row {i} = {trow} - needs at least one integer coordinate to be a valid holoSeq input file"
+                                )
                                 return
         if len(hh) < 2:
-            log.debug('extending haps %s' % hh)
+            log.debug("extending haps %s" % hh)
             hh.append(hh[0])
         hh.sort()
         return (hsDims, haps, xcoords, ycoords, annos, plotType, metadata, gffdata, hh)
@@ -195,7 +209,7 @@ class holoSeq_maker:
             else:
                 chrx = "Out of range"
                 offsx = 0
-                chry= "Out of range"
+                chry = "Out of range"
                 offsy = 0
                 i = bisect_left(h1starts, x)
                 if i > 0 and i <= len(h1names):
@@ -219,11 +233,11 @@ class holoSeq_maker:
 
         def showH2(x, y):
             if np.isnan(x) or np.isnan(y):
-                s = "Mouse click on image for location"           
+                s = "Mouse click on image for location"
             else:
                 chrx = "Out of range"
                 offsx = 0
-                chry= "Out of range"
+                chry = "Out of range"
                 offsy = 0
                 i = bisect_left(h2starts, x)
                 if i > 0 and i <= len(h2names):
@@ -251,7 +265,7 @@ class holoSeq_maker:
             else:
                 chrx = "Out of range"
                 offsx = 0
-                chry= "Out of range"
+                chry = "Out of range"
                 offsy = 0
                 i = bisect_left(h1starts, x)
                 if i > 0 and i <= len(h1names):
@@ -297,14 +311,14 @@ class holoSeq_maker:
                     h2starts.append(cstart)
                     h2names.append(contig)
         hap = hh[0]
-        if (len(h2starts) == 0):
+        if len(h2starts) == 0:
             h2starts = h1starts
             h2names = h1names
-            log.warn('only one haplotype read for %s' % title)
+            log.warn("only one haplotype read for %s" % title)
         qtic1 = [(h1starts[i], h1names[i]) for i in range(len(h1starts))]
         hap = hh[1]
         qtic2 = [(hqstarts[hap][x], x) for x in hqstarts[hap].keys()]
-   
+
         # can take the np.tril or filter the upper triangle while processing pairs
         # and rotate so the diagonal becomes the x axis but need some kind of
         # sideways scroller to work right
@@ -316,15 +330,15 @@ class holoSeq_maker:
         # it can be copied, edited to suit your needs and
         # run repeatedly without waiting for the data to be mapped.
         xcf = os.path.splitext(metadata["xclenfile"][0])[0]
-        ycf = 'Y:' + os.path.splitext(metadata["yclenfile"][0])[0]
+        ycf = "Y:" + os.path.splitext(metadata["yclenfile"][0])[0]
         print("xcf", xcf, "ycf", ycf)
         pafxy = pd.DataFrame.from_dict({xcf: xcoords, ycf: ycoords})
         pafp = hv.Points(pafxy, kdims=[xcf, ycf])
 
         # apply_when(pafp, operation=rasterize, predicate=lambda x: len(x) > 5000)
         stream = hv.streams.Tap(x=0, y=0)
-        ax = metadata.get('axes', [None])[0]
-        log.debug('axes = %s' % ax)
+        ax = metadata.get("axes", [None])[0]
+        log.debug("axes = %s" % ax)
         if ax == "BOTH":
             showloc = pn.bind(showTrans, x=stream.param.x, y=stream.param.y)
         elif ax == haps[0]:
@@ -332,7 +346,7 @@ class holoSeq_maker:
         elif ax == haps[1]:
             showloc = pn.bind(showH2, x=stream.param.x, y=stream.param.y)
         else:
-            log.warn('ax = %s for title = %s - cannot assign axes' % (ax, title))
+            log.warn("ax = %s for title = %s - cannot assign axes" % (ax, title))
             showloc = pn.bind(showTrans, x=stream.param.x, y=stream.param.y)
         # an alternative but can't get a stream in there..nice to have control over the resample_when but.
         # dat.hvplot(kind="scatter", x="x", y="y", color="maroon", rasterize=True, resample_when=200, cnorm='log', padding=(0, 0.1), cmap="inferno",
@@ -446,21 +460,21 @@ class holoSeq_maker:
 
     def makeGFFPanel(self, inFile, pwidth):
         """
-        prepare a complete panel for the final display
-https://www.ncbi.nlm.nih.gov/gene/?term=XP_026235740.1
+                prepare a complete panel for the final display
+        https://www.ncbi.nlm.nih.gov/gene/?term=XP_026235740.1
 
-import urllib.request
-xpuri = 'https://www.ncbi.nlm.nih.gov/gene/?term=XP_026235740.1'
-req = urllib.request.Request(xpuri)
-with urllib.request.urlopen(req) as response:
-   apage = response.read()
-escaped_html = html.escape(apage)
+        import urllib.request
+        xpuri = 'https://www.ncbi.nlm.nih.gov/gene/?term=XP_026235740.1'
+        req = urllib.request.Request(xpuri)
+        with urllib.request.urlopen(req) as response:
+           apage = response.read()
+        escaped_html = html.escape(apage)
 
-# Create iframe embedding the escaped HTML and display it
-iframe_html = f'<iframe srcdoc="{escaped_html}" style="height:100%; width:100%" frameborder="0"></iframe>'
+        # Create iframe embedding the escaped HTML and display it
+        iframe_html = f'<iframe srcdoc="{escaped_html}" style="height:100%; width:100%" frameborder="0"></iframe>'
 
-# Display iframe in a Panel HTML pane
-pn.pane.HTML(iframe_html, height=350, sizing_mode="stretch_width")
+        # Display iframe in a Panel HTML pane
+        pn.pane.HTML(iframe_html, height=350, sizing_mode="stretch_width")
         """
 
         def showX(x, y):
@@ -472,8 +486,8 @@ pn.pane.HTML(iframe_html, height=350, sizing_mode="stretch_width")
                 offsx = x - h1starts[i - 1]
                 s = "%s:%d" % (chrx, offsx)
                 xi = bisect_left(segs[xcf], x)
-                xtarget = segs['target'][xi]
-                s += ' x %s' % (xtarget )
+                xtarget = segs["target"][xi]
+                s += " x %s" % (xtarget)
 
             str_pane = pn.pane.Str(
                 s,
@@ -483,11 +497,12 @@ pn.pane.HTML(iframe_html, height=350, sizing_mode="stretch_width")
                     "text-align": "center",
                 },
                 width=pwidth,
-                
             )
             return str_pane
 
-        (hsDims, hapsread, xcoords, ycoords, annos, plotType, metadata, gffdata, hh) = self.import_holoSeq_data(inFile)
+        (hsDims, hapsread, xcoords, ycoords, annos, plotType, metadata, gffdata, hh) = (
+            self.import_holoSeq_data(inFile)
+        )
         xcf = os.path.splitext(metadata["xclenfile"][0])[0]
         segs = {
             xcf: [],
@@ -497,7 +512,7 @@ pn.pane.HTML(iframe_html, height=350, sizing_mode="stretch_width")
             "target": [],
             "colour": [],
             "thickness": [],
-            "alpha": []
+            "alpha": [],
         }
         """
 cds XP_026238700.1 1401967516 1401967635 100 100 - 204
@@ -508,14 +523,14 @@ cds XP_026248570.1 531341254 531341334 100 100 + 134
         cdthick = 50
         for i, rows in enumerate(gffdata):
             if rows[0].lower() == "mrna":
-                (kind, targ,  contig, startp, endp, y1, y2, strand, score) = rows[:10]
+                (kind, targ, contig, startp, endp, y1, y2, strand, score) = rows[:10]
                 startp = int(startp)
                 endp = int(endp)
                 y1 = int(y1)
                 y2 = int(y2)
                 colr = "blue"
                 if strand == "-":
-                    colr = "maroon"        
+                    colr = "maroon"
                 segs["target"].append(targ)
                 segs[xcf].append(startp)
                 segs["x2"].append(endp)
@@ -524,15 +539,17 @@ cds XP_026248570.1 531341254 531341334 100 100 + 134
                 segs["colour"].append(colr)
                 segs["thickness"].append(mthick)
                 segs["alpha"].append(1.0)
-                #segs["stopc"].append(stopc)
-            elif rows[0].lower() == "cds": #  f"cds {targ} {con} {startp} {endp} {y} {y} {strand} {score}\n"
-                (kind, targ, contig, startp, endp , y1, y2, strand, score) = rows[:10]
+                # segs["stopc"].append(stopc)
+            elif (
+                rows[0].lower() == "cds"
+            ):  #  f"cds {targ} {con} {startp} {endp} {y} {y} {strand} {score}\n"
+                (kind, targ, contig, startp, endp, y1, y2, strand, score) = rows[:10]
                 startp = int(startp)
                 endp = int(endp)
                 y = int(y1)
                 colr = "blue"
                 if strand == "-":
-                    colr = "maroon"        
+                    colr = "maroon"
                 segs["target"].append(targ)
                 segs[xcf].append(startp)
                 segs["x2"].append(endp)
@@ -563,10 +580,13 @@ cds XP_026248570.1 531341254 531341334 100 100 + 134
         # qtic1 = [(hqstarts[hap][x], x) for x in hqstarts[hap].keys()]
         # print("qtic1=", qtic1[:20])
         gffp = hv.Segments(
-            segs, [xcf, 'wy1', 'x2', 'y2'], vdims=["target", "colour", "thickness", "alpha"]
-            )
+            segs,
+            [xcf, "wy1", "x2", "y2"],
+            vdims=["target", "colour", "thickness", "alpha"],
+        )
 
-        gffp.opts(title="title",
+        gffp.opts(
+            title="title",
             color="colour",
             line_width="thickness",
             alpha="alpha",
@@ -580,7 +600,7 @@ cds XP_026248570.1 531341254 531341334 100 100 + 134
             scalebar_unit=("bp"),
             fontsize={"xticks": 8, "yticks": 10},
             show_grid=True,
-            autorange='y',
+            autorange="y",
             tools=[
                 "xwheel_zoom",
                 "box_zoom",
@@ -590,8 +610,8 @@ cds XP_026248570.1 531341254 531341334 100 100 + 134
             ],
             default_tools=[],
             active_tools=["xwheel_zoom", "tap", "xpan"],
-            shared_axes=True
-            )
+            shared_axes=True,
+        )
         apply_when(gffp, operation=rasterize, predicate=lambda x: len(x) > 5000)
         taps = hv.streams.Tap(source=gffp, x=0, y=0)
         showloc = pn.bind(showX, x=taps.param.x, y=taps.param.y)

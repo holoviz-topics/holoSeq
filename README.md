@@ -145,7 +145,8 @@ cd holoSeq
 python -m venv venv
 . venv/bin/activate
 pip install -r requirements.txt 
-panel serve holoseq_display.py --show --args --inFile mUroPar1.paf_cis1.hseq.gz --size 1000
+panel serve holoseq_display.py --show --args --inFile mUroPar1H1H2.paf_cisH1_hseq.gz --size 1000
+
 
 ```
 
