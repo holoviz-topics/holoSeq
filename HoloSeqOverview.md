@@ -1,6 +1,8 @@
 # HoloSeq
 
-This project uses a precomputed mapping data format for sequence annotation that allows large scale data to be viewed
+
+Internally, this project uses a *precomputed mapping data format* for sequence annotation that allows large scale data to be viewed
+
 as 1D charts or 2D heatmaps using a generic visualisation infrastructure built using the [Holoviews ecosystem](https://holoviews.org/).
 
 Preparing the coordinates for a 60GB HiC paf file with 720 million pairs takes a couple of hours so it makes sense to save them in
@@ -115,5 +117,3 @@ files
 `panel serve holoseq_display.py --show --args --inFile foo.gz bar.gz baz.gz zot.gz --title my holoseq plot`
 
 The Dockerfile is a work in progress as part of an interactive Galaxy tool.
-
-
