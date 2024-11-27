@@ -1,3 +1,5 @@
+# ruff: noqa
+
 # for Mashmap paf, python holoSeq_prepare_paf.py --inFile  hg002_2k99.paf --title "hg002 Mashmap" --hap_indicator None --contig_sort length
 # for HiC pairs
 # python holoSeq_prepare_paf.py --inFile mUroPar1H1H2.paf --xclenfile mUroPar1H1suffix.len --yclenfile mUroPar1H2suffix.len --contig_sort VGPname --hap_indicator Suffix --title "VGP mUroPar1 HiC data"
@@ -183,8 +185,8 @@ def VGPsortfunc(s1, s2):
         return -1  # u1 goes before unloc
     isSuper1 = (not u1) and (("SUPER" in s1[0]) or ("CHR" in s1[0]))
     isSuper2 = (not u2) and (("SUPER" in s2[0]) or ("CHR" in s2[0]))
-    isScaff1 = (not u1) and (("SCAFFOLD" in s1[0]))
-    isScaff2 = (not u2) and (("SCAFFOLD" in s2[0]))
+    isScaff1 = (not u1) and ("SCAFFOLD" in s1[0])
+    isScaff2 = (not u2) and ("SCAFFOLD" in s2[0])
     if isSuper1 and not isSuper2:
         return -1
     elif isSuper2 and not isSuper1:
@@ -538,9 +540,7 @@ class pafConvert:
                 fh.read(1)
                 return True
             except gzip.BadGzipFile:
-                log.info(
-                    "inFname %s is not a gzip so will read as text" % inFname
-                )
+                log.info("inFname %s is not a gzip so will read as text" % inFname)
                 return False
 
     def prepPafGZ(self, hsId, haps, xcontigs, ycontigs, args):

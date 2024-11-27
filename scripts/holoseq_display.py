@@ -1,3 +1,5 @@
+# ruff: noqa
+
 # see https://github.com/fubar2/holoSeq
 # pip install datashader dask[dataframe] holoviews[recommended] pandas matplotlib bokeh
 #
@@ -28,7 +30,6 @@ import panel as pn
 from holoviews.operation.datashader import (
     rasterize,
     dynspread,
-    datashade,
 )
 from holoviews.operation.element import apply_when
 from holoviews.operation.resample import ResampleOperation2D
@@ -37,15 +38,6 @@ from holoviews.operation import decimate
 
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger("holoseq_display")
-
-from holoviews import opts
-from holoviews.operation.datashader import (
-    datashade,
-    rasterize,
-    shade,
-    dynspread,
-    spread,
-)
 
 
 hv.extension("bokeh", "matplotlib", width=100)

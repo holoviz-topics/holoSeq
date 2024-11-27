@@ -1,3 +1,5 @@
+# ruff: noqa
+
 # RUN THIS to create three interactive HiC displays in a Jypyter notebook
 # after loading dependencies with
 # ! pip install datashader dask[dataframe] holoviews[recommended] pandas matplotlib bokeh
@@ -82,7 +84,6 @@ def xportHtml():
 
 
 def export_mapping():
-
     for ofn, d, hstarts in [
         ("cis1.tab", cis1, hqstarts[0]),
         ("cis2.tab", cis2, hqstarts[1]),
@@ -398,7 +399,7 @@ p3 = pn.Row(
                     scalebar_range="x",
                     scalebar_location="top_left",
                     scalebar_unit=("bp"),
-                 show_grid=True,
+                    show_grid=True,
                 )
             )
         ),

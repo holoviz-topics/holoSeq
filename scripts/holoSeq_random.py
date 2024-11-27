@@ -13,8 +13,6 @@
 #
 
 from bisect import bisect_left
-from collections import OrderedDict
-import gzip
 import itertools
 import math
 import numpy as np
