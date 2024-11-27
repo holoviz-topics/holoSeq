@@ -7,7 +7,7 @@ import panel as pn
 from holoviews.operation.datashader import dynspread, rasterize
 from holoviews.operation.resample import ResampleOperation2D
 
-from holo_seq.data import load_2d
+from holoseq.data import load
 
 hv.extension("bokeh")
 dynspread.max_px = 8
@@ -17,12 +17,20 @@ ResampleOperation2D.height = 1500
 
 
 def show_H1(names, starts, x, y, width):
+    chromosome_x = "Out of range"
+    offset_x = 0
+    chromosome_y = "Out of range"
+    offset_y = 0
+
     if np.isnan(x) or np.isnan(y):
         s = "Mouse click on image for current location"
+
     else:
         index_x = bisect_left(starts, x)
+
         chromosome_x = names[index_x - 1]
         offset_x = x - starts[index_x - 1]
+
         index_y = bisect_left(starts, y)
         chromosome_y = names[index_y - 1]
         offset_y = y - starts[index_y - 1]
@@ -36,7 +44,7 @@ def show_H1(names, starts, x, y, width):
 
 
 def maker(path: Path, width: int):
-    haploids, x_coords, y_coords, annotations, title = load_2d(path=path)
+    haploids, x_coords, y_coords, annotations, title, plot_type = load(path=path)
     points = hv.Points(np.column_stack((x_coords, y_coords)))
     tick_names = list(zip(haploids["H1"]["positions"], haploids["H1"]["contig_names"]))
     stream = hv.streams.Tap(source=points, x=np.nan, y=np.nan)
@@ -49,7 +57,7 @@ def maker(path: Path, width: int):
         width=width,
     )
 
-    holo_seq_heatmap = pn.Column(
+    holoseq_heatmap = pn.Column(
         show_location,
         pn.pane.HoloViews(
             dynspread(
@@ -76,4 +84,4 @@ def maker(path: Path, width: int):
             )
         ),
     )
-    return holo_seq_heatmap, title
+    return holoseq_heatmap, title
