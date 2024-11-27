@@ -5,7 +5,7 @@ Internally, this project uses a *precomputed mapping data format* for sequence a
 
 as 1D charts or 2D heatmaps using a generic visualisation infrastructure built using the [Holoviews ecosystem](https://holoviews.org/).
 
-Preparing the coordinates for a 60GB HiC paf file with 720 million pairs takes a couple of hours so it makes sense to save them in
+Preparing the coordinates for a 60GB HiC PAF file with 720 million pairs takes a couple of hours so it makes sense to save them in
 an intermediate precomputed format. Displaying the resulting 1.2GB compressed coordinates for 200M pairs only involving H1 takes about 10 minutes in comparison.
 
 The presentation layer supports genome scale feature data associated with a genomic reference or other sequence. The user can pan and zoom 
