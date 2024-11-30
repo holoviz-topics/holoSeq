@@ -17,8 +17,11 @@ from bisect import bisect_left
 from collections import OrderedDict
 import gzip
 import logging
+import math
 import numpy as np
 import os
+import sys
+
 
 import holoviews as hv
 import pandas as pd
@@ -28,25 +31,13 @@ import panel as pn
 from holoviews.operation.datashader import (
     rasterize,
     dynspread,
-    datashade,
 )
 from holoviews.operation.element import apply_when
 from holoviews.operation.resample import ResampleOperation2D
 from holoviews.operation import decimate
 
 
-logging.basicConfig(level=logging.DEBUG)
-log = logging.getLogger("holoseq_display")
-
 from holoviews import opts
-from holoviews.operation.datashader import (
-    datashade,
-    rasterize,
-    shade,
-    dynspread,
-    spread,
-)
-
 
 hv.extension("bokeh", "matplotlib", width=100)
 
@@ -58,19 +49,97 @@ ResampleOperation2D.width = 250
 ResampleOperation2D.height = 250
 
 
+logging.basicConfig(level=logging.DEBUG)
+log = logging.getLogger("holoseq_display")
+
 # inFile = "galaxy_inputs/paf/bothmap.paf.tab.tabular"
 inFile = "/home/ross/rossgit/holoviews-examples/holoSeqtest.gz"
 holoSeqHeaders = ["@v1HoloSeq1D", "@v1HoloSeq2D"]
 hv.extension("bokeh")
 pn.extension()
 
-dynspread.max_px = 7
-dynspread.threshold = 0.6
+
+SQRT2 = math.sqrt(2)
 
 
 def xportHtml(fname, hObj):
     "save a holoview object to an interactive but not adaptive scaling HTML page"
     hv.save(filename=fname, obj=hObj)
+
+
+class rotater:
+    """
+    moved into a class so the constants are only calculated once
+    if single pairs are being rotated
+    x 0 y 0 xr -2121320 yr 878679
+    x 3000000 y 0 xr 0 yr -1242640
+    x 1500000 y 1500000 xr 0 yr 878679
+    x 3000000 y 3000000 xr 2121320 yr 878679
+    """
+
+    def __init__(self, xwidth, ywidth):
+        self.rotate = True
+        self.onepointRot = True
+        self.radians = 0.7853981633974483
+        self.origin = (0, ywidth)
+        self.cos_rad = math.cos(self.radians)
+        self.sin_rad = math.sin(self.radians)
+        (self.xmin, self.ymax) = self.rotatecoords(0, 0, adjust=False)
+        self.ymin = self.rotatecoords(xwidth, 0, adjust=False)[1]
+        self.xmax = self.rotatecoords(xwidth, ywidth, adjust=False)[0]
+        self.xnew = SQRT2 * xwidth
+        self.ynew = ywidth / SQRT2
+        self.xwidth = xwidth
+        self.ywidth = ywidth
+        self.xscalefact = self.xwidth / self.xnew
+        self.yscalefact = self.ywidth / self.ynew
+
+    def rotatecoords(
+        self,
+        xin=0,
+        yin=0,
+        adjust=True,
+    ):
+        """
+        This version optimised to operate on pair at a time so precomputed constants
+        # make a rotated heatmap where the diagonal becomes the horizontal x axis
+        # https://gist.github.com/LyleScott/d17e9d314fbe6fc29767d8c5c029c362
+        # this inflates the xaxis by sqrt(2) but can rescale and it seems to work (TM)
+        # xcis1r, ycis1r = rotatecoords(xcis1, ycis1, radians=0.7853981633974483, origin=(max(xcis1),max(ycis1)))
+        # pafxycis1 = pd.DataFrame(np.vstack([xcis1r,ycis1r]).T, columns = ['x', 'y'])
+        # y height is complicated - h^2 + (1/2*sqrt2*xwdith)^2 = y^2
+        """
+        self.offset_x, self.offset_y = self.origin
+        adjusted_x = xin - self.offset_x
+        adjusted_y = yin - self.offset_y
+        qx = self.offset_x + self.cos_rad * adjusted_x + self.sin_rad * adjusted_y
+        qy = self.offset_y + -self.sin_rad * adjusted_x + self.cos_rad * adjusted_y
+        if adjust:
+            xrs = (qx - self.xmin) * self.xscalefact
+            yrs = (qy - self.ymin) * self.yscalefact
+        else:
+            xrs = qx
+            yrs = qy
+        if self.onepointRot:
+            return (xrs, yrs)
+        else:
+            xyr = pd.DataFrame(np.vstack([xrs, yrs]).T, columns=["x", "y"])
+            return xyr
+
+    def unrotatecoords(self, xr=0, yr=0, adjust=True):
+        """
+        rotated coords back calculate
+        """
+        qx = xr
+        qy = yr
+        if adjust:
+            qx = xr / self.xscalefact + self.xmin
+            qy = yr / self.yscalefact + self.ymin
+        adjx = (self.offset_y - qy + qx - self.offset_x) / 2
+        adjy = qx - self.offset_x - adjx
+        x = adjx / self.cos_rad + self.offset_x
+        y = adjy / self.cos_rad + self.offset_y
+        return (x, y)
 
 
 class holoSeq_maker:
@@ -81,6 +150,7 @@ class holoSeq_maker:
     def __init__(self, width):
         """ """
         self.pwidth = width
+        self.rotated = False
 
     def xportHtml(self, fname, hObj):
         "save a holoview object to an interactive but not adaptive scaling HTML page"
@@ -124,6 +194,9 @@ class holoSeq_maker:
                         metadata[srow[0]] = srow[1:]
                         if srow[0] == "GFF":
                             isGFF = True
+                        if srow[0] == "rotated":
+                            if srow[1] == "True":
+                                self.rotated = True
                     else:
                         srow = row.split()
                         if hsDims == 2:
@@ -164,7 +237,10 @@ class holoSeq_maker:
                             )
                             return
                         else:
-                            if srow[0].isdigit() and srow[1].isdigit():
+                            if (
+                                str(abs(int(srow[0]))).isdigit()
+                                and str(abs(int(srow[1]))).isdigit()
+                            ):
                                 xcoords.append(int(srow[0]))
                                 ycoords.append(int(srow[1]))
                                 if lrow > 2:
@@ -181,7 +257,7 @@ class holoSeq_maker:
                             )  # mrna XP_026254554.1 SUPER_5 1006698964 1006703995 100 100 + 3226 1006703993
 
                         else:
-                            if srow[0].isdigit():
+                            if str(abs(int(srow[0]))).isdigit():
                                 xcoords.append(int(srow[0]))
                                 if lrow > 1:
                                     ycoords.append(int(srow[1]))
@@ -203,7 +279,7 @@ class holoSeq_maker:
         prepare a complete panel for the final display
         """
 
-        def showH1(x, y):
+        def showTap(x, y, rot, cxstarts, cxnames, cystarts, cynames):
             if np.isnan(x) or np.isnan(y):
                 s = "Mouse click on image for location"
             else:
@@ -211,71 +287,36 @@ class holoSeq_maker:
                 offsx = 0
                 chry = "Out of range"
                 offsy = 0
-                i = bisect_left(h1starts, x)
-                if i > 0 and i <= len(h1names):
-                    chrx = h1names[i - 1]
-                    offsx = x - h1starts[i - 1]
-                i = bisect_left(h1starts, y)
-                if i > 0 and i <= len(h1names):
-                    chry = h1names[i - 1]
-                    offsy = y - h1starts[i - 1]
-                s = "X axis %s:%d Y axis %s:%d" % (chrx, offsx, chry, offsy)
-            str_pane = pn.pane.Str(
-                s,
-                styles={
-                    "font-size": "10pt",
-                    "color": "darkblue",
-                    "text-align": "center",
-                },
-                width=pwidth,
+                if self.rotated:
+                    xur, yur = rot.unrotatecoords(xr=x, yr=y, adjust=True)
+                    if True or yur <= xur:
+                        i = bisect_left(cxstarts, xur)
+                        if i > 0 and i <= len(cxnames):
+                            chrx = cxnames[i - 1]
+                            offsx = xur - cxstarts[i - 1]
+                        i = bisect_left(cystarts, yur)
+                        if i > 0 and i <= len(cynames):
+                            chry = cynames[i - 1]
+                            offsy = yur - cystarts[i - 1]
+                else:
+                    i = bisect_left(cxstarts, x)
+                    if i > 0 and i <= len(cxnames):
+                        chrx = cxnames[i - 1]
+                        offsx = x - cxstarts[i - 1]
+                    i = bisect_left(cystarts, y)
+                    if i > 0 and i <= len(cynames):
+                        chry = cynames[i - 1]
+                        offsy = y - cystarts[i - 1]
+            s = "X genome %s:%d Y genome %s:%d x %d y %d xur %d yur %d" % (
+                chrx,
+                offsx,
+                chry,
+                offsy,
+                x,
+                y,
+                xur,
+                yur,
             )
-            return str_pane
-
-        def showH2(x, y):
-            if np.isnan(x) or np.isnan(y):
-                s = "Mouse click on image for location"
-            else:
-                chrx = "Out of range"
-                offsx = 0
-                chry = "Out of range"
-                offsy = 0
-                i = bisect_left(h2starts, x)
-                if i > 0 and i <= len(h2names):
-                    chrx = h2names[i - 1]
-                    offsx = x - h2starts[i - 1]
-                i = bisect_left(h2starts, y)
-                if i > 0 and i <= len(h2names):
-                    chry = h2names[i - 1]
-                    offsy = y - h2starts[i - 1]
-                s = "X axis %s:%d Y axis %s:%d" % (chrx, offsx, chry, offsy)
-            str_pane = pn.pane.Str(
-                s,
-                styles={
-                    "font-size": "10pt",
-                    "color": "darkblue",
-                    "text-align": "center",
-                },
-                width=pwidth,
-            )
-            return str_pane
-
-        def showTrans(x, y):
-            if np.isnan(x) or np.isnan(y):
-                s = "Mouse click on image for location"
-            else:
-                chrx = "Out of range"
-                offsx = 0
-                chry = "Out of range"
-                offsy = 0
-                i = bisect_left(h1starts, x)
-                if i > 0 and i <= len(h1names):
-                    chrx = h1names[i - 1]
-                    offsx = x - h1starts[i - 1]
-                i = bisect_left(h2starts, y)
-                if i > 0 and i <= len(h2names):
-                    chry = h2names[i - 1]
-                    offsy = y - h2starts[i - 1]
-                s = "X axis %s:%d Y axis %s:%d" % (chrx, offsx, chry, offsy)
             str_pane = pn.pane.Str(
                 s,
                 styles={
@@ -290,6 +331,7 @@ class holoSeq_maker:
         (hsDims, hapsread, xcoords, ycoords, annos, plotType, metadata, gffdata, hh) = (
             self.import_holoSeq_data(inFile)
         )
+        rot = rotater(max(xcoords), max(ycoords))
         title = " ".join(metadata["title"])
         hqstarts = OrderedDict()
         haps = []
@@ -317,14 +359,10 @@ class holoSeq_maker:
             log.warn("only one haplotype read for %s" % title)
         qtic1 = [(h1starts[i], h1names[i]) for i in range(len(h1starts))]
         hap = hh[1]
-        qtic2 = [(hqstarts[hap][x], x) for x in hqstarts[hap].keys()]
-
-        # can take the np.tril or filter the upper triangle while processing pairs
-        # and rotate so the diagonal becomes the x axis but need some kind of
-        # sideways scroller to work right
-        # xcis1r, ycis1r = rotatecoords(xcis1, ycis1, radians=0.7853981633974483, origin=(max(xcis1),max(ycis1)))
-        # pafxycis1 = pd.DataFrame(np.vstack([xcis1r,ycis1r]).T, columns = ['x', 'y'])
-        # --------------------cut here---------------------------------
+        if self.rotated: # yaxis makes no real sense
+            qtic2 = [(0,'')]
+        else:
+            qtic2 = [(h2starts[i], h2names[i]) for i in range(len(h2starts))]
         # once the pairs have been read and mapped into a grid, the code
         # below does the plotting.
         # it can be copied, edited to suit your needs and
@@ -340,14 +378,41 @@ class holoSeq_maker:
         ax = metadata.get("axes", [None])[0]
         log.debug("axes = %s" % ax)
         if ax == "BOTH":
-            showloc = pn.bind(showTrans, x=stream.param.x, y=stream.param.y)
+            showloc = pn.bind(
+                showTap,
+                x=stream.param.x,
+                y=stream.param.y,
+                rot=rot,
+                cxnames=h1names,
+                cxstarts=h1starts,
+                cynames=h2names,
+                cystarts=h2starts,
+            )
         elif ax == haps[0]:
-            showloc = pn.bind(showH1, x=stream.param.x, y=stream.param.y)
+            showloc = pn.bind(
+                showTap,
+                x=stream.param.x,
+                y=stream.param.y,
+                rot=rot,
+                cxnames=h1names,
+                cxstarts=h1starts,
+                cynames=h1names,
+                cystarts=h1starts,
+            )
         elif ax == haps[1]:
-            showloc = pn.bind(showH2, x=stream.param.x, y=stream.param.y)
+            showloc = pn.bind(
+                showTap,
+                x=stream.param.x,
+                y=stream.param.y,
+                rot=rot,
+                cxnames=h2names,
+                cxstarts=h2starts,
+                cynames=h2names,
+                cystarts=h2starts,
+            )
         else:
             log.warn("ax = %s for title = %s - cannot assign axes" % (ax, title))
-            showloc = pn.bind(showTrans, x=stream.param.x, y=stream.param.y)
+            sys.exit(2)
         # an alternative but can't get a stream in there..nice to have control over the resample_when but.
         # dat.hvplot(kind="scatter", x="x", y="y", color="maroon", rasterize=True, resample_when=200, cnorm='log', padding=(0, 0.1), cmap="inferno",
         #   min_height=700, autorange='y', title="Datashader Rasterize", colorbar=True, line_width=2 ,marker="x" )
@@ -371,7 +436,7 @@ class holoSeq_maker:
                     tools=["tap"],
                     scalebar=True,
                     scalebar_range="x",
-                    scalebar_location="top_left",
+                    scalebar_location="bottom_left",
                     scalebar_unit=("bp"),
                     show_grid=True,
                 )
@@ -406,6 +471,7 @@ class holoSeq_maker:
         (hsDims, hapsread, xcoords, ycoords, annos, plotType, metadata, gffdata, hh) = (
             self.import_holoSeq_data(inFile)
         )
+        self.rotated = metadata.get("rotated") == "True"
         title = " ".join(metadata["title"])
         haps = []
         print("Read nx=", len(xcoords), "ny=", len(ycoords))

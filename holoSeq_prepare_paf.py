@@ -101,7 +101,7 @@ def VGPsortfunc(s1, s2):
     # ^([^_]+)_(\S+)H[12]{1}$ gives group1 SUPER or Scaffold and group2 X or 22
     #     ^([^_]+)_([^_]+)_unloc_(\S+)H[12]{1}$ gives super aa x for super_aa_unloc_XH2
     """
-    ssc = re.compile("^(CHR)_*(\d+|[a-zA-Z0-9]+)_*(\S*)$")
+    ssc = re.compile(r"^(CHR)_*(\d+|[a-zA-Z0-9]+)_*(\S*)$")
     # should match chrY or chr_y_paternal or chr333
     ss1 = re.compile(
         r"^([^_]+)_(\S+)H[12]{1}$"
@@ -202,6 +202,66 @@ def contsort(contigs, args):
     scont = OrderedDict(zip(cnames, cstarts))
     maxpos = cstarts[-1] + clens[-1]
     return scont, maxpos
+
+SQRT2 = math.sqrt(2)
+
+class rotater():
+    """
+    moved into a class so the constants are only calculated once
+    if single pairs are being rotated
+    x 0 y 0 xr -2121320 yr 878679
+    x 3000000 y 0 xr 0 yr -1242640
+    x 1500000 y 1500000 xr 0 yr 878679
+    x 3000000 y 3000000 xr 2121320 yr 878679
+    """
+    def __init__(self, xwidth, ywidth):
+        self.rotate = True
+        self.onepointRot = True
+        self.radians=0.7853981633974483
+        self.origin=(0, ywidth)
+        self.cos_rad = math.cos(self.radians)
+        self.sin_rad = math.sin(self.radians)
+        (self.xmin, self.ymax) = self.rotatecoords(0,0, adjust=False)
+        self.ymin = self.rotatecoords(xwidth,0, adjust=False)[1]
+        self.xmax = self.rotatecoords(xwidth,ywidth, adjust=False)[0]
+        self.xnew = SQRT2*xwidth
+        self.ynew = ywidth/SQRT2
+        self.xwidth = xwidth
+        self.ywidth = ywidth
+        self.xscalefact = self.xwidth/self.xnew
+        self.yscalefact = self.ywidth/self.ynew
+        log.debug("xmin %d xnew %d ymin %d ynew %d, cos %f, sin %f" % (self.xmin, self.xnew, self.ymin, self.ynew, self.cos_rad, self.sin_rad))
+        
+
+
+    def rotatecoords(self,
+            xin=0, yin=0, adjust=True,
+        ):
+            """
+            This version optimised to operate on pair at a time so precomputed constants
+            # make a rotated heatmap where the diagonal becomes the horizontal x axis
+            # https://gist.github.com/LyleScott/d17e9d314fbe6fc29767d8c5c029c362
+            # this inflates the xaxis by sqrt(2) but can rescale and it seems to work (TM)
+            # xcis1r, ycis1r = rotatecoords(xcis1, ycis1, radians=0.7853981633974483, origin=(max(xcis1),max(ycis1)))
+            # pafxycis1 = pd.DataFrame(np.vstack([xcis1r,ycis1r]).T, columns = ['x', 'y'])
+            # y height is complicated - h^2 + (1/2*sqrt2*xwdith)^2 = y^2
+            """
+            self.offset_x, self.offset_y = self.origin
+            adjusted_x = xin - self.offset_x
+            adjusted_y = yin - self.offset_y
+            qx = self.offset_x + self.cos_rad * adjusted_x + self.sin_rad * adjusted_y
+            qy = self.offset_y + -self.sin_rad * adjusted_x + self.cos_rad * adjusted_y
+            if adjust:
+                xrs = (qx-self.xmin)*self.xscalefact
+                yrs = (qy-self.ymin)*self.yscalefact
+            else:
+                xrs = qx
+                yrs = qy
+            if self.onepointRot:
+                return (xrs, yrs)
+            else:
+                xyr = pd.DataFrame(np.vstack([xrs,yrs]).T, columns=["x", "y"])
+                return xyr
 
 
 class gffConvert:
@@ -448,30 +508,17 @@ class pafConvert:
         """
         if rotating paf line at a time, better to pre-calculate the constants once rather than once for each point
         """
-        self.sqrt2 = math.sqrt(2)
-        self.radians=0.7853981633974483
-        self.origin=(0, 0)
-        self.cos_rad = math.cos(self.radians)
-        self.sin_rad = math.sin(self.radians)
-        log.debug("pafconvert: xwidth %s, ywidth %d" % (xwidth, ywidth))
-        self.xnew = xwidth * self.sqrt2
-        self.xmin = xwidth - self.xnew
-        self.ynew = (ywidth**2 - (self.xnew / 2) ** 2) ** 0.5 # rotated y now at 45 degrees so height is the new y to be rescaled to ywidth
-        self.ymin = (1.0 - self.sin_rad) * ywidth # upward shift from the rotation
-        self.xwidth = xwidth
-        self.ywidth = ywidth
-        log.debug("xmin %d xnew %d ymin %d ynew %d" % (self.xmin, self.xnew, self.ymin, self.ynew))
-        self.inFname = inFname
+        self.rot = rotater(xwidth, ywidth)
+        self.rotate = args.rotate
+        self.rot.onepointRot = True
+        self.rot.origin = (0, ywidth)
+        self.outFprefix = inFname
         self.xcontigs = xcontigs
         self.ycontigs = ycontigs
-        self.rotate = args.rotate
-        self.onepointRot = self.rotate
-        self.outFprefix = args.outprefix
         # have the axes set up so prepare the three plot x/y vectors
         # for a second pass to calculate all the coordinates.
         # adding tooltips just does not scale so abandoned - see the tooltip old version
         ncis1 = ncis2 = ntrans = 0
-        # print('ycon %s' % (ycontigs))
         hsId = holoSeqHeaders[1]
         self.inFname = inFname
         self.prepPafGZ(hsId, haps, xcontigs, ycontigs, args)
@@ -486,33 +533,6 @@ class pafConvert:
         self.transf.close()
 
 
-    def rotatecoords(self,
-        xin, yin,
-    ):
-        """
-        This version operates on pair at a time so precomputed constants
-        # make a rotated heatmap where the diagonal becomes the horizontal x axis
-        # https://gist.github.com/LyleScott/d17e9d314fbe6fc29767d8c5c029c362
-        # this inflates the xaxis by sqrt(2) but can rescale and it seems to work (TM)
-        # xcis1r, ycis1r = rotatecoords(xcis1, ycis1, radians=0.7853981633974483, origin=(max(xcis1),max(ycis1)))
-        # pafxycis1 = pd.DataFrame(np.vstack([xcis1r,ycis1r]).T, columns = ['x', 'y'])
-        # y height is complicated - h^2 + (1/2*sqrt2*xwdith)^2 = y^2
-        """
-        offset_x, offset_y = self.origin
-        adjusted_x = xin - offset_x
-        adjusted_y = yin - offset_y
-        qx = offset_x + self.cos_rad * adjusted_x + self.sin_rad * adjusted_y
-        qy = offset_y + -self.sin_rad * adjusted_x + self.cos_rad * adjusted_y
-        # must rescale x after inflation or for y, deflation and shift from rotation
-        if self.onepointRot:
-            xr = (qx - self.xmin) / self.xnew * self.xwidth
-            yr = (qy - self.ymin) / self.ynew * self.ywidth
-            return xr, yr
-        else:
-            xr = [(x - self.xmin) / self.xnew * self.xwidth for x in qx]
-            yr = [(x - self.ymin) / self.ynew * self.ywidth for x in qy]
-            xyr = pd.DataFrame(np.vstack([xr, yr]).T, columns=["x", "y"])
-            return xyr
 
     def readPAF(self, f):
         # might be a gz
@@ -531,47 +551,51 @@ class pafConvert:
                         x = self.xcontigs[c1] + n1
                         y = self.ycontigs[c2] + n2
                         if self.rotate:
-                            if y > x: # lower triangle
-                                x, y = self.rotatecoords(x,y)
+                            if y <= x: # lower triangle
+                                x, y = self.rot.rotatecoords(x, y, True)
                             else:
-                                continue
-                        row = str.encode("%d %d\n" % (x, y))
-                        self.transf.write(row)
-                        ntrans += 1
+                                x = None
+                        if x is not None:
+                            row = str.encode("%d %d\n" % (x, y))
+                            self.transf.write(row)
+                            ntrans += 1
                     else:
                         x = self.xcontigs[c2] + n2
                         y = self.ycontigs[c1] + n1
                         if self.rotate:
-                            if y > x: # lower triangle
-                                x, y = self.rotatecoords(x,y)
+                            if y <= x: # lower triangle
+                                x, y = self.rot.rotatecoords(xin=x, yin=y, adjust=True)
                             else:
-                                continue
-                        row = str.encode("%d %d\n" % (x, y))
-                        self.transf.write(row)
-                        ntrans += 1
+                                x = None
+                        if x is not None:
+                            row = str.encode("%d %d\n" % (x, y))
+                            self.transf.write(row)
+                            ntrans += 1
                 else:  # cis
                     if H1 == haps[0]:
                         x = self.xcontigs[c1] + n1
                         y = self.xcontigs[c2] + n2
                         if self.rotate:
-                            if y > x: # lower triangle
-                                x, y = self.rotatecoords(x,y)
+                            if y <= x: # lower triangle
+                                x, y = self.rot.rotatecoords(xin=x, yin=y, adjust=True)
                             else:
-                                continue
-                        row = str.encode("%d %d\n" % (x, y))
-                        self.cis1f.write(row)
-                        ncis1 += 1
+                                x = None
+                        if x is not None:
+                            row = str.encode("%d %d\n" % (x, y))
+                            self.cis1f.write(row)
+                            ncis1 += 1
                     else:
                         x = self.ycontigs[c1] + n1
                         y = self.ycontigs[c2] + n2
                         if self.rotate:
-                            if y > x: # lower triangle
-                                x, y = self.rotatecoords(x,y)
+                            if y <= x: # lower triangle
+                                x, y = self.rot.rotatecoords(xin=x, yin=y, adjust=True)
                             else:
-                                continue
-                        row = str.encode("%d %d\n" % (x, y))
-                        self.cis2f.write(row)
-                        ncis2 += 1
+                                x = None
+                        if x is not None:
+                            row = str.encode("%d %d\n" % (x, y))
+                            self.cis2f.write(row)
+                            ncis2 += 1
         log.debug("ncis1=%d, ncis2=%d, ntrans=%d" % (ncis1, ncis2, ntrans))
 
     def isGzip(self, inFname):
@@ -620,12 +644,16 @@ class pafConvert:
                 "@@xclenfile %s" % xclenfile,
                 "@@yclenfile %s" % yclenfile,
                 "@@axes %s" % ax,
+                "@@rotated %s" % self.rotate,
             ]
 
             outs = "\n".join(metah + h) + "\n"
             outf.write(str.encode(outs))
-
-        f1 = gzip.open("%s_cis%s_hseq.gz" % (self.outFprefix, haps[0]), mode="wb")
+        
+        fn1 = "%s_cis%s_hseq.gz" % (self.inFname, haps[0])
+        if self.rotate:
+            fn1 = "%s_rotated_cis%s_hseq.gz" % (self.inFname, haps[0])
+        f1 = gzip.open(fn1, mode="wb")
         self.cis1f = io.BufferedWriter(f1, buffer_size=1024 * 1024)
         prepHeader(
             haps[0],
@@ -639,7 +667,10 @@ class pafConvert:
             yclenfile=args.xclenfile,
             ax=haps[0],
         )
-        f2 = gzip.open("%s_cis%s_hseq.gz" % (self.outFprefix, haps[1]), mode="wb")
+        fn2 = "%s_cis%s_hseq.gz" % (self.inFname, haps[1])
+        if self.rotate:
+            fn2 = "%s_rotated_cis%s_hseq.gz" % (self.inFname, haps[1])
+        f2 = gzip.open(fn2, mode="wb")
         self.cis2f = io.BufferedWriter(f2, buffer_size=1024 * 1024)
         prepHeader(
             haps[1],
@@ -653,7 +684,10 @@ class pafConvert:
             yclenfile=args.yclenfile,
             ax=haps[1],
         )
-        f3 = gzip.open("%s_trans_hseq.gz" % (self.outFprefix), mode="wb")
+        fn3 = "%s_trans_hseq.gz" % (self.inFname)
+        if self.rotate:
+            fn3 = "%s_rotated_trans_hseq.gz" % (self.inFname)
+        f3 = gzip.open(fn3, mode="wb")
         self.transf = io.BufferedWriter(f3, buffer_size=1024 * 1024)
         prepHeader(
             haps,
@@ -693,11 +727,7 @@ if __name__ == "__main__":
         help="Optional Y axis contig names and lengths, whitespace delimited for different reference sequences",
         required=False,
     )
-    parser.add_argument(
-        "--outprefix",
-        help="First part of output filename for precomputed plot file. Metadata will be added for each different plot and hseq.gz will be appended",
-        required=True,
-    )
+    
     parser.add_argument(
         "--title", help="Title for the plot", default="Plot title goes here"
     )
