@@ -26,7 +26,7 @@ down to individual points and back.*
 This is new work in progress.
 
 Development started in late October 2024. A draft framework
-[description and specification is here.](https://github.com/holoviz-topics/holoSeq/blob/main/HoloSeqOverview.md).
+[description and specification is here.](https://github.com/holoviz-topics/holoSeq/blob/main/docs/HoloSeqOverview.md)
 
 ## Core idea: Features on intervals arranged along linear axes for browsing
 
@@ -35,7 +35,7 @@ and plotted using rasterize and datashader, with each tap converted into contig 
 in an IPython notebook, or if the dependencies are available, can be served from this repository's
 root, as:
 
-`panel serve holoSeq_random.py --show`
+`panel serve scripts/holoSeq_random.py --show`
 
 Edit the default 10000 xmax value to get a sense of scale capacity - 10M is not a problem. There is
 very little code needed for plotting. Most of the code is needed to create some sample contigs of
@@ -196,15 +196,15 @@ the plot.
 - Only pairs involving H1 contigs (H1 cis) are used in the demonstration.
 
 Briefly, the framework creates the
-[minimum data required](https://github.com/holoviz-topics/holoSeq/blob/main/HoloSeqOverview.md) to create a
-plot. A genome lengths file is required, and the named contigs can be reordered by name or length.
-The axes are defined by the ordering. The lengths are cumulated to give an offset to the first
-nucleotide of each contig, so the track can be read and feature locations converted into the plot
-coordinate system, and stored as a compressed intermediate file. The display application reads these
-pre-computed plot coordinate files, with enough metadata about the reference sequence to add tic
-marks to the axes and to back-calculate the stream of user tap coordinates. A converter for PAF to
-compressed hseq format for input is available and was used to generate the demonstration. Bigwig is
-working and other common genomic annotation formats, such as gff and vcf will follow.
+[minimum data required](https://github.com/holoviz-topics/holoSeq/blob/main/docs/HoloSeqOverview.md)
+to create a plot. A genome lengths file is required, and the named contigs can be reordered by name
+or length. The axes are defined by the ordering. The lengths are cumulated to give an offset to the
+first nucleotide of each contig, so the track can be read and feature locations converted into the
+plot coordinate system, and stored as a compressed intermediate file. The display application reads
+these pre-computed plot coordinate files, with enough metadata about the reference sequence to add
+tic marks to the axes and to back-calculate the stream of user tap coordinates. A converter for PAF
+to compressed hseq format for input is available and was used to generate the demonstration. Bigwig
+is working and other common genomic annotation formats, such as gff and vcf will follow.
 
 Multiple input files will produce a stack of plots that work independently:
 
@@ -255,8 +255,8 @@ else
 ```
 
 This repository includes a python script conversion utility for PAF inputs,
-`scripts/holoSeq_prepare_paf.py`, that works with the awk PAF output and converts it into a compressed
-coordinate file. The compressed demonstration plotting data were prepared using:
+`scripts/holoSeq_prepare_paf.py`, that works with the awk PAF output and converts it into a
+compressed coordinate file. The compressed demonstration plotting data were prepared using:
 
 ```bash
 python scripts/holoSeq_prepare_paf.py \
@@ -393,19 +393,31 @@ cd holoSeq
 ```
 
 Create a virtual environment using your favorite method, _e.g._ `conda`, `venv`, `poetry`, `pixi`
-_etc_. We will use `conda` as an example.
+_etc_. We will use `conda` as an example. No `conda` environment file is supplied within the repo,
+however, we can generate one using
+[`pyproject2conda`](https://github.com/usnistgov/pyproject2conda%60). See `pyproject2conda` on how
+to install it in your system.
 
 ```bash
+pyproject2conda yaml --file pyproject.toml \
+    --no-header \
+    --name holoseq-dev \
+    --channel conda-forge \
+    --python-include infer \
+    --extra dev --extra notebooks --extra test \
+    --output environment.yaml
 conda create env --file environment.yaml
 conda activate holoseq-dev
 ```
 
 Next install `holoSeq` into the virtual environment, and install the pre-commit hooks. If you would
-like to contribute to work with Jupyter notebooks, install `notebooks` along with the `dev` and
-`tests` flags.
+like to contribute to work with Jupyter notebooks, be sure to install `notebooks` in the `pip`
+command.
 
 ```bash
-pip install --editable .[dev,test] # Include notebooks if you would like to install Juptyer.
+pip install --editable .
+# For installing notebooks development as well, use the following command instead of the one above.
+#pip install --editable .[notebooks]
 pre-commit install
 ```
 

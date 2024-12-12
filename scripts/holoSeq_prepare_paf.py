@@ -27,30 +27,24 @@
 # Ross Lazarus October 2024
 
 import argparse
-
-from collections import OrderedDict
-from functools import cmp_to_key
-from pathlib import Path
-
 import gzip
 import io
 import itertools
 import logging
 import math
-import numpy as np
-
-import re
 import os
+import re
+from collections import OrderedDict
+from functools import cmp_to_key
+from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import pybigtools
 
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger("holoseq_prepare")
-
-# inFile = "galaxy_inputs/paf/bothmap.paf.tab.tabular"
-inFile = "/home/ross/rossgit/holoviews-examples/huge.paf"
-
+inFile = ""
 holoSeqHeaders = ["@v1HoloSeq1D", "@v1HoloSeq2D"]
 
 
@@ -257,11 +251,7 @@ class gffConvert:
                         segs[id] = []
                     if kind.lower() in ["cds", "mrna"]:
                         anno = text.split(";")
-                        tanno = [
-                            x.strip()[7:]
-                            for x in anno
-                            if x.lower().startswith("target=")
-                        ]
+                        tanno = [x.strip()[7:] for x in anno if x.lower().startswith("target=")]
                         target = tanno[0]
                     startp = int(startp)
                     endp = int(endp)
@@ -278,10 +268,7 @@ class gffConvert:
                         if kind.lower() == "mrna":
                             if target:
                                 if mrnaseen.get(target, None):
-                                    log.debug(
-                                        "Seeing mrna target %s again at row %d"
-                                        % (target, i)
-                                    )
+                                    log.debug("Seeing mrna target %s again at row %d" % (target, i))
                                 else:
                                     mrnaseen[target] = target
                                 segs[id].append(
@@ -413,9 +400,7 @@ class bwConvert:
                 bw = bwf.records(bchr)
                 data[cchr]["xval"] = [x[2] for x in bw]
             else:
-                log.warn(
-                    "Bigwig contig %s not found in supplied X axis lengths file" % cchr
-                )
+                log.warn("Bigwig contig %s not found in supplied X axis lengths file" % cchr)
         self.export_mapping(outFname, contigs, data, args)
 
     def export_mapping(self, outFname, contigs, data, args):
@@ -447,9 +432,7 @@ class bwConvert:
             ofn.write(str.encode("\n".join(hdr) + "\n"))
             for chr in data.keys():
                 for i in range(len(data[chr]["xstart"])):
-                    row = str.encode(
-                        "%d %d\n" % (data[chr]["xstart"][i], data[chr]["xval"][i])
-                    )
+                    row = str.encode("%d %d\n" % (data[chr]["xstart"][i], data[chr]["xval"][i]))
                     ofn.write(row)
 
 
@@ -565,9 +548,7 @@ class pafConvert:
             """
             h = ["@%s %s %d" % (getHap(k), k, xcontigs[k]) for k in xcontigs.keys()]
             if len(haps) > 1:
-                h += [
-                    "@%s %s %d" % (getHap(k), k, ycontigs[k]) for k in ycontigs.keys()
-                ]
+                h += ["@%s %s %d" % (getHap(k), k, ycontigs[k]) for k in ycontigs.keys()]
             metah = [
                 hsId,
                 "@@heatmap",
@@ -651,12 +632,8 @@ if __name__ == "__main__":
         help="Optional Y axis contig names and lengths, whitespace delimited for different reference sequences",
         required=False,
     )
-    parser.add_argument(
-        "--title", help="Title for the plot", default="Plot title goes here"
-    )
-    parser.add_argument(
-        "--contig_sort", help="VGPname, name, length, none", default="length"
-    )
+    parser.add_argument("--title", help="Title for the plot", default="Plot title goes here")
+    parser.add_argument("--contig_sort", help="VGPname, name, length, none", default="length")
     parser.add_argument(
         "--refURI",
         help="URI for the genome reference sequence used for the coordinates for metadata",

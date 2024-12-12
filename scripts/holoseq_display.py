@@ -1,6 +1,6 @@
 # ruff: noqa
 
-# see https://github.com/fubar2/holoSeq
+# see https://github.com/holoviz-topics/holoSeq
 # pip install datashader dask[dataframe] holoviews[recommended] pandas matplotlib bokeh
 #
 # panel serve --address 0.0.0.0 --port 8080 --show --session-token-expiration 9999999 --args --inFile ../hg002_bothHiC.paf_cisH1_hseq.gz
@@ -15,31 +15,23 @@
 # Ross Lazarus October 2024
 
 import argparse
-from bisect import bisect_left
-from collections import OrderedDict
 import gzip
 import logging
-import numpy as np
 import os
+from bisect import bisect_left
+from collections import OrderedDict
 
 import holoviews as hv
+import numpy as np
 import pandas as pd
 import panel as pn
-
-
-from holoviews.operation.datashader import (
-    rasterize,
-    dynspread,
-)
+from holoviews.operation import decimate
+from holoviews.operation.datashader import dynspread, rasterize
 from holoviews.operation.element import apply_when
 from holoviews.operation.resample import ResampleOperation2D
-from holoviews.operation import decimate
-
 
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger("holoseq_display")
-
-
 hv.extension("bokeh", "matplotlib", width=100)
 
 # Default values suitable for this notebook
@@ -50,8 +42,7 @@ ResampleOperation2D.width = 250
 ResampleOperation2D.height = 250
 
 
-# inFile = "galaxy_inputs/paf/bothmap.paf.tab.tabular"
-inFile = "/home/ross/rossgit/holoviews-examples/holoSeqtest.gz"
+inFile = ""
 holoSeqHeaders = ["@v1HoloSeq1D", "@v1HoloSeq2D"]
 hv.extension("bokeh")
 pn.extension()
@@ -81,7 +72,7 @@ class holoSeq_maker:
     def import_holoSeq_data(self, inFile):
         """
         reverse process of dumping the data in holoSeq format from a converter
-        see https://github.com/fubar2/holoSeq/blob/main/HoloSeqOverview.md
+        see https://github.com/holoviz-topics/holoSeq/blob/main/docs/HoloSeqOverview.md
         """
         haps = {}
         hh = []
@@ -100,9 +91,7 @@ class holoSeq_maker:
                         log.warn(
                             f"Supplied input {inFile} has first row {trow} so is not a valid holoSeq input file"
                         )
-                        log.warn(
-                            "First row must start with one of these:%s" % holoSeqHeaders
-                        )
+                        log.warn("First row must start with one of these:%s" % holoSeqHeaders)
                         return
                     hsDims = holoSeqHeaders.index(hseqformat) + 1
                     if hsDims == 1:
@@ -617,12 +606,10 @@ parser = argparse.ArgumentParser(description="", epilog="")
 parser.add_argument(
     "--inFile",
     help="gzipped hseq coordinates and contigs",
-    default="mUroPar1_cis1.hseq.gz",
+    default="data/mUroPar1_cis1.hseq.gz",
     nargs="+",
 )
-parser.add_argument(
-    "--size", help="Display size in pixels. Default is 800", default=1000
-)
+parser.add_argument("--size", help="Display size in pixels. Default is 800", default=1000)
 parser.add_argument("--version", "-V", action="version", version="0.1")
 args = parser.parse_args()
 pwidth = int(args.size)

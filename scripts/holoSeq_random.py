@@ -1,4 +1,4 @@
-# see https://github.com/fubar2/holoSeq
+# see https://github.com/holoviz-topics/holoSeq
 # illustrates some of the basic ideas in converting
 # a set of features that have been mapped to a genome into a
 # linear or in this case 2D display.
