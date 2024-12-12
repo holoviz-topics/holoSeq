@@ -1,8 +1,9 @@
 #!/usr/bin/env python
+# ruff: noqa
+
 import argparse
 import sys
 from CPT_GFFParser import gffParse, gffSeqFeature
-
 
 
 def convertSeqFeat(inFeat, defaultSource="gffSeqFeature"):
@@ -187,6 +188,5 @@ if __name__ == "__main__":
     parser.add_argument("gff3", type=argparse.FileType("r"), help="GFF3 File")
     args = parser.parse_args()
     gff = parseGFF(args.gff3)
-    print('types=', list(set(gff['type'])))
-    print('qual=',(gff['qualifiers']))
-
+    print("types=", list(set(gff["type"])))
+    print("qual=", (gff["qualifiers"]))

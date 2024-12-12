@@ -1,3 +1,5 @@
+# ruff: noqa
+
 # RUN THIS to create three interactive HiC displays in a Jypyter notebook
 # after loading dependencies with
 # ! pip install datashader dask[dataframe] holoviews[recommended] pandas matplotlib bokeh
@@ -14,26 +16,21 @@
 # This holoviews application is mostly monolithic because it cannot easily be
 # split up without passing lots of parameters AFAIK.
 # it works. be happy.
+import math
 from bisect import bisect_left
 from collections import OrderedDict
 from functools import cmp_to_key
-import math
-import numpy as np
 
 import holoviews as hv
-import panel as pn
+import numpy as np
 import pandas as pd
-
-from holoviews.operation.datashader import (
-    rasterize,
-    dynspread,
-)
-from holoviews.operation.resample import ResampleOperation2D
+import panel as pn
 from holoviews.operation import decimate
+from holoviews.operation.datashader import dynspread, rasterize
+from holoviews.operation.resample import ResampleOperation2D
 
 useDecimate = False  # will rasterize instead
-# inFile = "galaxy_inputs/paf/bothmap.paf.tab.tabular"
-inFile = "/home/ross/rossgit/holoviews-examples/huge.paf"
+inFile = ""
 ptwidth = 1000
 pcwidth = 800
 # width settings for plots and location bars
@@ -82,7 +79,6 @@ def xportHtml():
 
 
 def export_mapping():
-
     for ofn, d, hstarts in [
         ("cis1.tab", cis1, hqstarts[0]),
         ("cis2.tab", cis2, hqstarts[1]),
@@ -398,7 +394,7 @@ p3 = pn.Row(
                     scalebar_range="x",
                     scalebar_location="top_left",
                     scalebar_unit=("bp"),
-                 show_grid=True,
+                    show_grid=True,
                 )
             )
         ),
