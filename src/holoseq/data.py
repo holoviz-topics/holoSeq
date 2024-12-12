@@ -3,6 +3,7 @@ import gzip
 from pathlib import Path
 
 from holoseq.config import VALID_HSEQ_FORMATS
+from holoseq.exceptions import HoloSeqFormatError
 
 
 def is_valid_header(header: str) -> tuple[bool, int, str]:
@@ -12,7 +13,7 @@ def is_valid_header(header: str) -> tuple[bool, int, str]:
     hseq_format = tokens[0]
     if hseq_format not in VALID_HSEQ_FORMATS:
         msg = f"Not a valid holoSeq file. Header must start with one of: {VALID_HSEQ_FORMATS}."
-        raise IOError(msg)
+        raise HoloSeqFormatError(msg)
     else:
         check = True
 
@@ -73,7 +74,7 @@ def load(path: Path):
                             f"Line {i} of {str(path)} does not include a `reference name` "
                             "`contig name`, and `contig length`."
                         )
-                        raise IOError(msg)
+                        raise HoloSeqFormatError(msg)
             else:
                 tokens = [token.strip() for token in line.split()]
                 num_tokens = len(tokens)
@@ -85,7 +86,7 @@ def load(path: Path):
                             f"Line {i} of {str(path)} needs at least two valid integer "
                             "coordinates to be a valid 2D holoSeq file."
                         )
-                        raise IOError(msg)
+                        raise HoloSeqFormatError(msg)
 
                     if num_tokens >= 2:
                         coords_check = tokens[0].isdigit() and tokens[1].isdigit()
@@ -100,7 +101,7 @@ def load(path: Path):
                                 f"Line {i} of {str(path)} needs at least two valid integer "
                                 "coordinates to be a valid 2D holoSeq file."
                             )
-                            raise IOError(msg)
+                            raise HoloSeqFormatError(msg)
                 else:
                     if is_gff:
                         gff_data.append(tokens)
@@ -118,6 +119,6 @@ def load(path: Path):
                                 f"Line {i} of {str(path)} needs at least one valid integer to be "
                                 "a valid 1D holoSeq file."
                             )
-                            raise IOError("Not a valid holoSeq file.")
+                            raise HoloSeqFormatError("Not a valid holoSeq file.")
 
     return haploids, x_coords, y_coords, annotations, title, plot_type
