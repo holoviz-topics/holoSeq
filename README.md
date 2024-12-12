@@ -26,7 +26,7 @@ down to individual points and back.*
 This is new work in progress.
 
 Development started in late October 2024. A draft framework
-[description and specification is here.](https://github.com/fubar2/holoSeq/blob/main/HoloSeqOverview.md).
+[description and specification is here.](https://github.com/holoviz-topics/holoSeq/blob/main/HoloSeqOverview.md).
 
 ## Core idea: Features on intervals arranged along linear axes for browsing
 
@@ -48,7 +48,7 @@ This is proposed as a generalisable model for a linear display of genomic featur
 of independent contigs in holoSeq displays.
 
 ```python
-# see https://github.com/fubar2/holoSeq
+# see https://github.com/holoviz-topics/holoSeq
 # Needs dependencies - uncomment and run the next line to install them in a notebook
 # ! pip install datashader dask[dataframe] holoviews[recommended] pandas matplotlib bokeh
 # or in a python venv, use
@@ -156,7 +156,7 @@ environment directory can be made and deleted without any other changes to your 
 1. Clone this repository in a convenient and disposable directory:
 
 ```bash
-git clone https://github.com/fubar2/holoSeq
+git clone https://github.com/holoviz-topics/holoSeq
 ```
 
 2. Change directory to that new holoSeq subdirectory, prepare the python virtual environment needed,
@@ -167,14 +167,14 @@ cd holoSeq
 python -m venv venv
 . venv/bin/activate
 pip install -r requirements.txt
-panel serve holoseq_display.py --show --args --inFile mUroPar1H1H2.paf_cisH1_hseq.gz --size 1000
+panel serve scripts/holoseq_display.py --show --args --inFile data/mUroPar1H1H2.paf_cisH1_hseq.gz --size 1000
 ```
 
 Expect to see output shown below, and a web browser window should pop open. Takes 10-20 seconds to
 read the 3.4M pairs and to show the interactive visualisation:
 
 ```bash
-panel serve holoseq_display.py --args --inFile mUroPar1_cis1.hseq.gz --size 1000
+panel serve scripts/holoseq_display.py --args --inFile data/mUroPar1_cis1.hseq.gz --size 1000
 2024-10-29 17:06:33,645 Starting Bokeh server version 3.6.0 (running on Tornado 6.4.1)
 2024-10-29 17:06:33,646 User authentication hooks NOT provided (default user enabled)
 2024-10-29 17:06:33,649 Bokeh app running at: http://localhost:5006/holoseq_display
@@ -196,7 +196,7 @@ the plot.
 - Only pairs involving H1 contigs (H1 cis) are used in the demonstration.
 
 Briefly, the framework creates the
-[minimum data required](https://github.com/fubar2/holoSeq/blob/main/HoloSeqOverview.md) to create a
+[minimum data required](https://github.com/holoviz-topics/holoSeq/blob/main/HoloSeqOverview.md) to create a
 plot. A genome lengths file is required, and the named contigs can be reordered by name or length.
 The axes are defined by the ordering. The lengths are cumulated to give an offset to the first
 nucleotide of each contig, so the track can be read and feature locations converted into the plot
@@ -209,8 +209,8 @@ working and other common genomic annotation formats, such as gff and vcf will fo
 Multiple input files will produce a stack of plots that work independently:
 
 ```bash
-panel serve holoseq_display.py --show --args --inFile \
-    mUroPar1.paf_cis1.hseq.gz small.paf_cis1.hseq.gz --size 1000
+panel serve scripts/holoseq_display.py --show --args --inFile \
+    data/mUroPar1.paf_cis1.hseq.gz small.paf_cis1.hseq.gz --size 1000
 ```
 
 ## holoSeq data format disk sizes
@@ -255,20 +255,20 @@ else
 ```
 
 This repository includes a python script conversion utility for PAF inputs,
-`holoSeq_prepare_paf.py`, that works with the awk PAF output and converts it into a compressed
+`scripts/holoSeq_prepare_paf.py`, that works with the awk PAF output and converts it into a compressed
 coordinate file. The compressed demonstration plotting data were prepared using:
 
 ```bash
-python holoSeq_prepare_paf.py \
-    --inFile mUroPar1.paf \
+python scripts/holoSeq_prepare_paf.py \
+    --inFile data/mUroPar1.paf \
     --title "VGP Arctic Ground Squirrel arima HiC contact matrix, paternal haplotype"
 ```
 
 for Mashmap paf inputs, use:
 
 ```bash
-python holoSeq_prepare_paf.py \
-    --inFile hg002_2k99.paf \
+python scripts/holoSeq_prepare_paf.py \
+    --inFile data/hg002_2k99.paf \
     --title "hg002 Mashmap" \
     --hap_indicator None \
     --contig_sort length
