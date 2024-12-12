@@ -1,0 +1,45 @@
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v5.0.0
+  hooks:
+  - id: check-toml
+  - id: check-builtin-literals
+  - id: check-case-conflict
+  - id: check-docstring-first
+  - id: check-illegal-windows-names
+  - id: check-json
+  - id: check-merge-conflict
+  - id: check-toml
+  - id: check-yaml
+  - id: debug-statements
+  - id: end-of-file-fixer
+  - id: mixed-line-ending
+  - id: no-commit-to-branch
+  - id: pretty-format-json
+  - id: trailing-whitespace
+
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: v0.8.0
+  hooks:
+    - id: ruff
+      types_or:
+        - python
+        - pyi
+      args:
+        - --fix
+        - --exit-non-zero-on-fix
+    - id: ruff-format
+      types_or:
+        - python
+        - pyi
+
+- repo: https://github.com/executablebooks/mdformat
+  rev: 0.7.19
+  hooks:
+    - id: mdformat
+      types:
+        - markdown
+      language: python
+      args:
+        - --wrap
+        - "100"

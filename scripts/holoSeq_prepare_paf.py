@@ -1,3 +1,5 @@
+# ruff: noqa
+
 # for Mashmap paf, python holoSeq_prepare_paf.py --inFile  hg002_2k99.paf --title "hg002 Mashmap" --hap_indicator None --contig_sort length
 # for HiC pairs
 # python holoSeq_prepare_paf.py --inFile mUroPar1H1H2.paf --xclenfile mUroPar1H1suffix.len --yclenfile mUroPar1H2suffix.len --contig_sort VGPname --hap_indicator Suffix --title "VGP mUroPar1 HiC data"
@@ -25,30 +27,24 @@
 # Ross Lazarus October 2024
 
 import argparse
-
-from collections import OrderedDict
-from functools import cmp_to_key
-from pathlib import Path
-
 import gzip
 import io
 import itertools
 import logging
 import math
-import numpy as np
-
-import re
 import os
+import re
+from collections import OrderedDict
+from functools import cmp_to_key
+from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import pybigtools
 
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger("holoseq_prepare")
-
-# inFile = "galaxy_inputs/paf/bothmap.paf.tab.tabular"
-inFile = "/home/ross/rossgit/holoviews-examples/huge.paf"
-
+inFile = ""
 holoSeqHeaders = ["@v1HoloSeq1D", "@v1HoloSeq2D"]
 
 
@@ -183,8 +179,8 @@ def VGPsortfunc(s1, s2):
         return -1  # u1 goes before unloc
     isSuper1 = (not u1) and (("SUPER" in s1[0]) or ("CHR" in s1[0]))
     isSuper2 = (not u2) and (("SUPER" in s2[0]) or ("CHR" in s2[0]))
-    isScaff1 = (not u1) and (("SCAFFOLD" in s1[0]))
-    isScaff2 = (not u2) and (("SCAFFOLD" in s2[0]))
+    isScaff1 = (not u1) and ("SCAFFOLD" in s1[0])
+    isScaff2 = (not u2) and ("SCAFFOLD" in s2[0])
     if isSuper1 and not isSuper2:
         return -1
     elif isSuper2 and not isSuper1:
@@ -255,11 +251,7 @@ class gffConvert:
                         segs[id] = []
                     if kind.lower() in ["cds", "mrna"]:
                         anno = text.split(";")
-                        tanno = [
-                            x.strip()[7:]
-                            for x in anno
-                            if x.lower().startswith("target=")
-                        ]
+                        tanno = [x.strip()[7:] for x in anno if x.lower().startswith("target=")]
                         target = tanno[0]
                     startp = int(startp)
                     endp = int(endp)
@@ -276,10 +268,7 @@ class gffConvert:
                         if kind.lower() == "mrna":
                             if target:
                                 if mrnaseen.get(target, None):
-                                    log.debug(
-                                        "Seeing mrna target %s again at row %d"
-                                        % (target, i)
-                                    )
+                                    log.debug("Seeing mrna target %s again at row %d" % (target, i))
                                 else:
                                     mrnaseen[target] = target
                                 segs[id].append(
@@ -411,9 +400,7 @@ class bwConvert:
                 bw = bwf.records(bchr)
                 data[cchr]["xval"] = [x[2] for x in bw]
             else:
-                log.warn(
-                    "Bigwig contig %s not found in supplied X axis lengths file" % cchr
-                )
+                log.warn("Bigwig contig %s not found in supplied X axis lengths file" % cchr)
         self.export_mapping(outFname, contigs, data, args)
 
     def export_mapping(self, outFname, contigs, data, args):
@@ -445,9 +432,7 @@ class bwConvert:
             ofn.write(str.encode("\n".join(hdr) + "\n"))
             for chr in data.keys():
                 for i in range(len(data[chr]["xstart"])):
-                    row = str.encode(
-                        "%d %d\n" % (data[chr]["xstart"][i], data[chr]["xval"][i])
-                    )
+                    row = str.encode("%d %d\n" % (data[chr]["xstart"][i], data[chr]["xval"][i]))
                     ofn.write(row)
 
 
@@ -538,9 +523,7 @@ class pafConvert:
                 fh.read(1)
                 return True
             except gzip.BadGzipFile:
-                log.info(
-                    "inFname %s is not a gzip so will read as text" % inFname
-                )
+                log.info("inFname %s is not a gzip so will read as text" % inFname)
                 return False
 
     def prepPafGZ(self, hsId, haps, xcontigs, ycontigs, args):
@@ -565,9 +548,7 @@ class pafConvert:
             """
             h = ["@%s %s %d" % (getHap(k), k, xcontigs[k]) for k in xcontigs.keys()]
             if len(haps) > 1:
-                h += [
-                    "@%s %s %d" % (getHap(k), k, ycontigs[k]) for k in ycontigs.keys()
-                ]
+                h += ["@%s %s %d" % (getHap(k), k, ycontigs[k]) for k in ycontigs.keys()]
             metah = [
                 hsId,
                 "@@heatmap",
@@ -651,12 +632,8 @@ if __name__ == "__main__":
         help="Optional Y axis contig names and lengths, whitespace delimited for different reference sequences",
         required=False,
     )
-    parser.add_argument(
-        "--title", help="Title for the plot", default="Plot title goes here"
-    )
-    parser.add_argument(
-        "--contig_sort", help="VGPname, name, length, none", default="length"
-    )
+    parser.add_argument("--title", help="Title for the plot", default="Plot title goes here")
+    parser.add_argument("--contig_sort", help="VGPname, name, length, none", default="length")
     parser.add_argument(
         "--refURI",
         help="URI for the genome reference sequence used for the coordinates for metadata",
