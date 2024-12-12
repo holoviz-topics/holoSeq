@@ -3,8 +3,6 @@
 Data format described here:
 https://github.com/holoviz-topics/holoSeq/blob/main/docs/HoloSeqOverview.md
 
-# Revised Instructions
-
 # Conversion from .hic format to hseq
 
 This script converts a .hic file into the HoloSeq hseq format using the
