@@ -1,7 +1,7 @@
 name: holoseq-dev
 channels:
   - conda-forge
-  - pyviz
+  - pyviz/label/dev
 dependencies:
   - python >3.10,<3.13
   - bokeh
@@ -14,7 +14,5 @@ dependencies:
   - pytest
   - pytest-cov
   - nbsite>=0.8.4,<0.9.0
-  - pip
-  - pip:
-      - setuptools
-      - setuptools-scm
+  - setuptools
+  - setuptools-scm
