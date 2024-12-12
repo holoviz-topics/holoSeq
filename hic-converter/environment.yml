@@ -1,8 +1,0 @@
-name: hic
-channels:
-  - conda-forge
-dependencies:
-  - python
-  - pip
-  - pip:
-    - hic-straw
