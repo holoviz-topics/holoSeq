@@ -39,6 +39,9 @@ dev = [
 notebooks = [
     "jupyterlab",
 ]
+converters = [
+    "hic-straw"
+]
 test = [
     "pytest",
     "pytest-cov",
