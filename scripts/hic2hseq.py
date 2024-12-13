@@ -1,7 +1,6 @@
-#!/usr/bin/python
 """Convert a .hic file into HoloSeq hseq format.
-Data format described here:
-https://github.com/holoviz-topics/holoSeq/blob/main/docs/HoloSeqOverview.md
+
+HoloSeq hseq format is described in holoSeq/docs/HoloSeqOverview.md
 
 # Conversion from .hic format to hseq
 
@@ -12,9 +11,9 @@ triangle of counts to distinguish it from asymmetric matrices.
 
 ## Usage:
 
-1. Install the required dependency:
+1. Install the package with the required dependencis:
    ```
-   pip install hic-straw
+   pip install holoSeq[converters]
    ```
 
 2. Download a .hic file. For example, in the series
@@ -37,7 +36,7 @@ triangle of counts to distinguish it from asymmetric matrices.
 A pre-converted HTAN file for [GSM6326543 is
 available (530MB)](https://pub-867b121072f54b4a9eecdf01cd27246b.r2.dev/GSM6326543_A001C007.hg38.nodups.pairs.hseq.gz).
 
-See hseq conversion output of GSM6326543 at `holoseq/docs/assets/README_GSM6326543.png`
+See hseq conversion output of GSM6326543 at `holoSeq/docs/assets/README_GSM6326543.png`
 """
 
 import gzip
@@ -49,10 +48,14 @@ from typing import List
 import hicstraw
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+)
+
 
 class GzipOut:
     """Context manager for writing gzipped files."""
+
     def __init__(self, fn: str):
         self.fn = fn
         self.f = gzip.open(fn, "wb")
@@ -66,6 +69,7 @@ class GzipOut:
     def __exit__(self, *_) -> None:
         self.f.close()
 
+
 def cumulative_sum(x: List[int]) -> List[int]:
     if not x:
         return x
@@ -73,6 +77,7 @@ def cumulative_sum(x: List[int]) -> List[int]:
     for n in x[1:]:
         y.append(n + y[-1])
     return y
+
 
 def convert_hic_to_hseq(hicfn: str, ostream: GzipOut, max_chrom: int, title: str) -> None:
     """Convert a .hic file into HoloSeq hseq format.
@@ -97,18 +102,20 @@ def convert_hic_to_hseq(hicfn: str, ostream: GzipOut, max_chrom: int, title: str
     cnames = [c.name for c in chroms]
 
     ostream.write(
-        f"@v1HoloSeq2D\n@title {title}\n" +
-        "".join(f"@H1 {chrom} {offset}\n" for chrom, offset in zip(cnames, offsets))
+        f"@v1HoloSeq2D\n@title {title}\n"
+        + "".join(f"@H1 {chrom} {offset}\n" for chrom, offset in zip(cnames, offsets))
     )
 
     xbase = 0
     for i, cx in enumerate(chroms[:max_chrom]):
         ybase = 0
-        for cy in chroms[:i + 1]:
+        for cy in chroms[: i + 1]:
             logger.info(f"Processing {cx.name} vs. {cy.name}")
 
             try:
-                for result in hicstraw.straw("observed", "NONE", hicfn, cx.name, cy.name, "BP", resolution):
+                for result in hicstraw.straw(
+                    "observed", "NONE", hicfn, cx.name, cy.name, "BP", resolution
+                ):
                     x = xbase + result.binY
                     y = ybase + result.binX
                     ostream.write(f"{x} {y}\n" * int(result.counts))
@@ -117,6 +124,7 @@ def convert_hic_to_hseq(hicfn: str, ostream: GzipOut, max_chrom: int, title: str
 
             ybase += cy.length
         xbase += cx.length
+
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__)
@@ -127,7 +135,7 @@ if __name__ == "__main__":
         "--max-chrom",
         type=int,
         default=0,
-        help="Maximum number of chromosomes to convert (default: all)"
+        help="Maximum number of chromosomes to convert (default: all)",
     )
 
     argv = ap.parse_args()
