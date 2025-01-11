@@ -16,6 +16,7 @@ repos:
   - id: mixed-line-ending
   - id: no-commit-to-branch
   - id: pretty-format-json
+    exclude_types: [jupyter]
   - id: trailing-whitespace
 
 - repo: https://github.com/astral-sh/ruff-pre-commit
