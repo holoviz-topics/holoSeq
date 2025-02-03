@@ -43,7 +43,7 @@ import gzip
 import logging
 import os
 import argparse
-from typing import List
+from typing import List, TextIO
 
 import hicstraw
 
@@ -79,7 +79,7 @@ def cumulative_sum(x: List[int]) -> List[int]:
     return y
 
 
-def convert_hic_to_hseq(hicfn: str, ostream: GzipOut, max_chrom: int, title: str) -> None:
+def convert_hic_to_hseq(hicfn: str, ostream: GzipOut, lenfile_stream: TextIO,lenfile_name: str, max_chrom: int, title: str) -> None:
     """Convert a .hic file into HoloSeq hseq format.
 
     Parameters:
@@ -88,8 +88,6 @@ def convert_hic_to_hseq(hicfn: str, ostream: GzipOut, max_chrom: int, title: str
         max_chrom (int): Maximum number of chromosomes to include.
         title (str): Title for the output matrix.
     """
-    if not os.path.isfile(hicfn):
-        raise FileNotFoundError(f"Input file '{hicfn}' does not exist.")
 
     hic = hicstraw.HiCFile(hicfn)
     chroms = hic.getChromosomes()
@@ -102,7 +100,7 @@ def convert_hic_to_hseq(hicfn: str, ostream: GzipOut, max_chrom: int, title: str
     cnames = [c.name for c in chroms]
 
     ostream.write(
-        f"@v1HoloSeq2D\n@title {title}\n"
+        f"@v1HoloSeq2D\n@@heatmap\n@@title {title}\n@@xclenfile {lenfile_name}\n@@yclenfile {lenfile_name}\n@@axes H1\n"
         + "".join(f"@H1 {chrom} {offset}\n" for chrom, offset in zip(cnames, offsets))
     )
 
@@ -141,10 +139,13 @@ if __name__ == "__main__":
     argv = ap.parse_args()
 
     argv.title = argv.title or argv.hicfile
+    lenfile_path = argv.hseqgz + ".len"
+    lenfile_name = os.path.basename(lenfile_path)
+    lenfile_stream = open(lenfile_path, mode="w")
 
     try:
         with GzipOut(argv.hseqgz) as ostream:
-            convert_hic_to_hseq(argv.hicfile, ostream, argv.max_chrom, argv.title)
+            convert_hic_to_hseq(argv.hicfile, ostream, lenfile_stream, lenfile_name, argv.max_chrom, argv.title)
         logger.info("Conversion completed successfully.")
     except Exception as e:
         logger.error(f"Failed to convert .hic to HoloSeq format: {e}")
